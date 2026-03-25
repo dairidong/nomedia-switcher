@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <string name="app_name">NoMedia Switcher</string>
+    <style name="Theme.NoMediaSwitcher" parent="@android:style/Theme">
+        <item name="android:statusBarColor" ns1:targetApi="l">@android:color/transparent</item>
+    </style>
+</resources>
