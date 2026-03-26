@@ -12,6 +12,7 @@ class AlbumRepositoryImpl : AlbumRepository {
         records: List<AlbumRecordEntity>,
         scan: List<AlbumCandidate>,
         pinHidden: Boolean,
+        scanCompleted: Boolean,
     ): List<AlbumEntry> {
         val localByDirectory = records.associateBy { it.directoryKey }
         val scannedByDirectory = scan.associateBy { it.directoryKey }
@@ -27,7 +28,7 @@ class AlbumRepositoryImpl : AlbumRepository {
                     displayName = scanned?.bucketName?.ifBlank { null }
                         ?: local?.displayName
                         ?: directoryKey.substringAfterLast('/'),
-                    state = mergedState(local, seenInScan),
+                    state = mergedState(local, seenInScan, scanCompleted),
                     treeUri = local?.treeUri,
                     lastAction = local?.lastAction,
                     lastFailure = local?.lastFailure,
@@ -45,6 +46,7 @@ class AlbumRepositoryImpl : AlbumRepository {
     private fun mergedState(
         local: AlbumRecordEntity?,
         seenInScan: Boolean,
+        scanCompleted: Boolean,
     ): AlbumState {
         if (local == null) {
             return AlbumState.Shown
@@ -52,6 +54,8 @@ class AlbumRepositoryImpl : AlbumRepository {
 
         return when {
             seenInScan && local.state == AlbumState.HiddenMissingFromScan -> AlbumState.Hidden
+            scanCompleted && !seenInScan && local.state == AlbumState.Hidden -> AlbumState.HiddenMissingFromScan
+            scanCompleted && !seenInScan && local.state == AlbumState.HiddenMissingFromScan -> AlbumState.HiddenMissingFromScan
             else -> local.state
         }
     }

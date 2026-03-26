@@ -113,6 +113,7 @@ class ObserveAlbumsUseCaseTest {
             ),
             scan = emptyList(),
             pinHidden = true,
+            scanCompleted = false,
         )
 
         assertEquals(AlbumState.Hidden, merged.single().state)
@@ -135,9 +136,28 @@ class ObserveAlbumsUseCaseTest {
                 ),
             ),
             pinHidden = true,
+            scanCompleted = true,
         )
 
         assertEquals(AlbumState.Hidden, merged.single().state)
+    }
+
+    @Test
+    fun hidden_album_becomes_missing_after_completed_scan_omits_it() = runTest {
+        val merged = useCase.merge(
+            records = listOf(
+                localAlbum(
+                    directoryKey = "Pictures/Secret",
+                    displayName = "Secret",
+                    state = AlbumState.Hidden,
+                ),
+            ),
+            scan = emptyList(),
+            pinHidden = true,
+            scanCompleted = true,
+        )
+
+        assertEquals(AlbumState.HiddenMissingFromScan, merged.single().state)
     }
 
     private fun localAlbum(

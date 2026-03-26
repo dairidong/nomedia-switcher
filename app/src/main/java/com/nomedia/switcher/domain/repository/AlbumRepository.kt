@@ -9,5 +9,6 @@ interface AlbumRepository {
         records: List<AlbumRecordEntity>,
         scan: List<AlbumCandidate>,
         pinHidden: Boolean,
+        scanCompleted: Boolean = false,
     ): List<AlbumEntry>
 }

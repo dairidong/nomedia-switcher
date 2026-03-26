@@ -11,7 +11,8 @@ class RefreshAlbumsUseCase(
         records: List<AlbumRecordEntity>,
         scan: List<AlbumCandidate>,
         pinHidden: Boolean,
+        scanCompleted: Boolean = false,
     ): List<AlbumEntry> {
-        return observeAlbumsUseCase.merge(records, scan, pinHidden)
+        return observeAlbumsUseCase.merge(records, scan, pinHidden, scanCompleted)
     }
 }

@@ -13,7 +13,8 @@ class ObserveAlbumsUseCase(
         records: List<AlbumRecordEntity>,
         scan: List<AlbumCandidate>,
         pinHidden: Boolean,
+        scanCompleted: Boolean = false,
     ): List<AlbumEntry> {
-        return albumRepository.merge(records, scan, pinHidden)
+        return albumRepository.merge(records, scan, pinHidden, scanCompleted)
     }
 }
