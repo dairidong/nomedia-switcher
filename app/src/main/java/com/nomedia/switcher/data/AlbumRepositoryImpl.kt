@@ -51,8 +51,7 @@ class AlbumRepositoryImpl : AlbumRepository {
         }
 
         return when {
-            !seenInScan && local.state == AlbumState.Hidden -> AlbumState.HiddenMissingFromScan
-            !seenInScan && local.state == AlbumState.HiddenMissingFromScan -> AlbumState.HiddenMissingFromScan
+            seenInScan && local.state == AlbumState.HiddenMissingFromScan -> AlbumState.Hidden
             else -> local.state
         }
     }
