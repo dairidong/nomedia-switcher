@@ -2,12 +2,13 @@ package com.nomedia.switcher.data.local.settings
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.core.DataStoreFactory
-import androidx.datastore.dataStoreFile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import androidx.datastore.dataStore
 import kotlinx.coroutines.flow.Flow
+
+private val Context.userSettingsDataStore: DataStore<UserSettings> by dataStore(
+    fileName = "user-settings.preferences",
+    serializer = UserSettingsSerializer,
+)
 
 class UserSettingsRepository(
     private val dataStore: DataStore<UserSettings>,
@@ -21,16 +22,9 @@ class UserSettingsRepository(
     }
 
     companion object {
-        fun create(
-            context: Context,
-            scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        ): UserSettingsRepository {
+        fun create(context: Context): UserSettingsRepository {
             return UserSettingsRepository(
-                dataStore = DataStoreFactory.create(
-                    serializer = UserSettingsSerializer,
-                    scope = scope,
-                    produceFile = { context.dataStoreFile("user-settings.preferences") },
-                ),
+                dataStore = context.applicationContext.userSettingsDataStore,
             )
         }
     }

@@ -10,21 +10,29 @@ object UserSettingsSerializer : Serializer<UserSettings> {
     override val defaultValue: UserSettings = UserSettings()
 
     override suspend fun readFrom(input: InputStream): UserSettings {
-        return try {
-            val payload = input.readBytes().toString(StandardCharsets.UTF_8).trim()
-            if (payload.isEmpty()) {
-                defaultValue
-            } else {
-                UserSettings(
-                    pinHiddenAlbumsToTop = payload.substringAfter("=")
-                        .trim()
-                        .toBooleanStrictOrNull()
-                        ?: payload.substringAfter("=").trim() == "1",
-                )
-            }
-        } catch (error: IllegalArgumentException) {
-            throw CorruptionException("Cannot read user settings", error)
+        val payload = input.readBytes().toString(StandardCharsets.UTF_8).trim()
+        if (payload.isEmpty()) {
+            return defaultValue
         }
+
+        val separatorIndex = payload.indexOf('=')
+        if (separatorIndex <= 0) {
+            throw CorruptionException("Cannot read user settings")
+        }
+
+        val key = payload.substring(0, separatorIndex).trim()
+        val rawValue = payload.substring(separatorIndex + 1).trim()
+        if (key != "pinHiddenAlbumsToTop") {
+            throw CorruptionException("Cannot read user settings")
+        }
+
+        val value = when (rawValue) {
+            "true", "1" -> true
+            "false", "0" -> false
+            else -> throw CorruptionException("Cannot read user settings")
+        }
+
+        return UserSettings(pinHiddenAlbumsToTop = value)
     }
 
     override suspend fun writeTo(t: UserSettings, output: OutputStream) {

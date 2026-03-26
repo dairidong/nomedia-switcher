@@ -37,22 +37,21 @@ class AlbumRecordDaoTest {
 
     @Test
     fun hidden_album_record_roundTrips() = runTest {
-        database.albumRecordDao().upsert(
-            AlbumRecordEntity(
-                directoryKey = "DCIM/Camera",
-                displayName = "Camera",
-                state = AlbumState.Hidden,
-                treeUri = null,
-                lastAction = ToggleAction.Hide,
-                lastFailure = null,
-                seenInLastScan = true,
-                updatedAtEpochMs = 1234L,
-            ),
+        val record = AlbumRecordEntity(
+            directoryKey = "DCIM/Camera",
+            displayName = "Camera",
+            state = AlbumState.Hidden,
+            treeUri = "content://tree/camera",
+            lastAction = ToggleAction.Hide,
+            lastFailure = "none",
+            seenInLastScan = true,
+            updatedAtEpochMs = 1234L,
         )
+
+        database.albumRecordDao().upsert(record)
 
         val records = database.albumRecordDao().observeAll().first()
 
-        assertEquals(listOf(AlbumState.Hidden), records.map { it.state })
-        assertEquals(listOf(ToggleAction.Hide), records.mapNotNull { it.lastAction })
+        assertEquals(listOf(record), records)
     }
 }
