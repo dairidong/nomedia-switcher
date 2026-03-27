@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NoMedia Switcher</string>
+    <string name="toggle_progress_channel_name">Toggle progress</string>
+    <string name="toggle_progress_message">Updating album visibility</string>
+    <string name="toggle_hide_progress_title">Hiding %1$s</string>
+    <string name="toggle_show_progress_title">Restoring %1$s</string>
 </resources>

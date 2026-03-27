@@ -57,9 +57,11 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation("androidx.datastore:datastore:1.1.1")
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.room:room-ktx:2.6.1")
     implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -71,6 +73,7 @@ dependencies {
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation("androidx.work:work-testing:2.9.1")
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
