@@ -2,9 +2,11 @@ package com.nomedia.switcher.data.toggle
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import com.nomedia.switcher.domain.model.ToggleResult
 import com.nomedia.switcher.worker.NomediaToggleExecutor
+import java.io.FileNotFoundException
 
 interface NomediaDirectoryAccess {
     suspend fun exists(treeUri: String, fileName: String): Boolean
@@ -34,10 +36,6 @@ class NomediaDocumentGateway(
         treeUri: String,
         directoryKey: String,
     ): ToggleResult {
-        if (!directoryAccess.exists(treeUri, NOMEDIA_FILE)) {
-            return ToggleResult.Success
-        }
-
         return if (directoryAccess.deleteFile(treeUri, NOMEDIA_FILE)) {
             ToggleResult.Success
         } else {
@@ -57,7 +55,25 @@ class SafNomediaDirectoryAccess(
         treeUri: String,
         fileName: String,
     ): Boolean {
-        return resolveTree(treeUri)?.findFile(fileName) != null
+        val treeDocumentUri = Uri.parse(treeUri)
+        val documentUri = buildChildDocumentUri(treeDocumentUri, fileName)
+        return try {
+            context.contentResolver.query(
+                documentUri,
+                arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                cursor.moveToFirst()
+            } == true
+        } catch (_: FileNotFoundException) {
+            false
+        } catch (_: SecurityException) {
+            false
+        } catch (_: IllegalArgumentException) {
+            false
+        }
     }
 
     override suspend fun createFile(
@@ -72,11 +88,31 @@ class SafNomediaDirectoryAccess(
         treeUri: String,
         fileName: String,
     ): Boolean {
-        val file = resolveTree(treeUri)?.findFile(fileName) ?: return true
-        return file.delete()
+        val treeDocumentUri = Uri.parse(treeUri)
+        val documentUri = buildChildDocumentUri(treeDocumentUri, fileName)
+        return try {
+            DocumentsContract.deleteDocument(context.contentResolver, documentUri)
+        } catch (_: FileNotFoundException) {
+            true
+        } catch (_: SecurityException) {
+            false
+        } catch (_: IllegalArgumentException) {
+            true
+        }
     }
 
     private fun resolveTree(treeUri: String): DocumentFile? {
         return DocumentFile.fromTreeUri(context, Uri.parse(treeUri))
+    }
+
+    private fun buildChildDocumentUri(
+        treeUri: Uri,
+        fileName: String,
+    ): Uri {
+        val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+        return DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            "$treeDocumentId/$fileName",
+        )
     }
 }

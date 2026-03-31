@@ -2,7 +2,12 @@
 <resources>
     <string name="app_name">NoMedia Switcher</string>
     <string name="toggle_progress_channel_name">Toggle progress</string>
+    <string name="toggle_result_channel_name">Toggle results</string>
     <string name="toggle_progress_message">Updating album visibility</string>
     <string name="toggle_hide_progress_title">Hiding %1$s</string>
     <string name="toggle_show_progress_title">Restoring %1$s</string>
+    <string name="toggle_hide_success_title">Hidden %1$s</string>
+    <string name="toggle_show_success_title">Restored %1$s</string>
+    <string name="toggle_failure_title">Couldn\'t update %1$s</string>
+    <string name="toggle_success_message">Album visibility was updated</string>
 </resources>

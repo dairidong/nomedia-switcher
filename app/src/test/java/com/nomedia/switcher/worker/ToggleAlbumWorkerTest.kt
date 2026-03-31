@@ -9,8 +9,10 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
 import com.nomedia.switcher.data.toggle.MediaRefreshCoordinator
 import com.nomedia.switcher.data.toggle.NomediaDocumentGateway
+import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
 import com.nomedia.switcher.domain.model.ToggleResult
+import com.nomedia.switcher.domain.usecase.AlbumStateWriter
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -23,14 +25,30 @@ import org.robolectric.annotation.Config
 class ToggleAlbumWorkerTest {
     @Test
     fun worker_marks_failure_when_grant_missing() = runTest {
+        val albumStateWriter = FakeAlbumStateWriter()
+        val notificationFactory = FakeWorkerNotificationFactory()
         val worker = buildWorker(
             grantRepository = FakeDirectoryGrantRepository(),
             gateway = FakeNomediaGateway(),
+            albumStateWriter = albumStateWriter,
+            notificationFactory = notificationFactory,
         )
 
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.failure(), result)
+        assertEquals(AlbumState.Failed, albumStateWriter.writes.single().state)
+        assertEquals(
+            listOf(
+                CompletionNotification(
+                    directoryKey = "DCIM/Camera",
+                    albumName = "Camera",
+                    action = ToggleAction.Hide,
+                    result = ToggleResult.PermanentFailure("Missing directory grant"),
+                ),
+            ),
+            notificationFactory.completions,
+        )
     }
 
     @Test
@@ -38,14 +56,21 @@ class ToggleAlbumWorkerTest {
         val grantRepository = FakeDirectoryGrantRepository().apply {
             grants["DCIM/Camera"] = "content://tree/camera"
         }
+        val albumStateWriter = FakeAlbumStateWriter()
+        val notificationFactory = FakeWorkerNotificationFactory()
         val worker = buildWorker(
             grantRepository = grantRepository,
             gateway = FakeNomediaGateway(result = ToggleResult.RetryableFailure("refresh pending")),
+            albumStateWriter = albumStateWriter,
+            notificationFactory = notificationFactory,
         )
 
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.retry(), result)
+        assertEquals(AlbumState.Failed, albumStateWriter.writes.single().state)
+        assertEquals("refresh pending", albumStateWriter.writes.single().lastFailure)
+        assertEquals(emptyList<CompletionNotification>(), notificationFactory.completions)
     }
 
     @Test
@@ -54,27 +79,46 @@ class ToggleAlbumWorkerTest {
             grants["DCIM/Camera"] = "content://tree/camera"
         }
         val gateway = FakeNomediaGateway()
+        val albumStateWriter = FakeAlbumStateWriter()
+        val notificationFactory = FakeWorkerNotificationFactory()
         val worker = buildWorker(
             grantRepository = grantRepository,
             gateway = gateway,
+            albumStateWriter = albumStateWriter,
+            notificationFactory = notificationFactory,
         )
 
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)
         assertEquals(listOf("hide:DCIM/Camera"), gateway.calls)
+        assertEquals(AlbumState.Hidden, albumStateWriter.writes.single().state)
+        assertEquals(
+            listOf(
+                CompletionNotification(
+                    directoryKey = "DCIM/Camera",
+                    albumName = "Camera",
+                    action = ToggleAction.Hide,
+                    result = ToggleResult.Success,
+                ),
+            ),
+            notificationFactory.completions,
+        )
     }
 
     private fun buildWorker(
         grantRepository: FakeDirectoryGrantRepository,
         gateway: FakeNomediaGateway,
+        albumStateWriter: FakeAlbumStateWriter,
+        notificationFactory: FakeWorkerNotificationFactory,
     ): TestableToggleAlbumWorker {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val workerFactory = TestToggleWorkerFactory(
             grantRepository = grantRepository,
             gateway = gateway,
             mediaRefreshCoordinator = FakeMediaRefreshCoordinator(),
-            notificationFactory = FakeWorkerNotificationFactory(),
+            notificationFactory = notificationFactory,
+            albumStateWriter = albumStateWriter,
         )
 
         return TestListenableWorkerBuilder<TestableToggleAlbumWorker>(context)
@@ -96,6 +140,7 @@ class ToggleAlbumWorkerTest {
         nomediaDocumentGateway: NomediaToggleExecutor,
         mediaRefreshCoordinator: MediaRefreshCoordinator,
         notificationFactory: WorkerNotificationFactory,
+        albumStateWriter: AlbumStateWriter,
     ) : ToggleAlbumWorker(
         appContext = appContext,
         workerParams = workerParams,
@@ -103,6 +148,7 @@ class ToggleAlbumWorkerTest {
         nomediaDocumentGateway = nomediaDocumentGateway,
         mediaRefreshCoordinator = mediaRefreshCoordinator,
         notificationFactory = notificationFactory,
+        albumStateWriter = albumStateWriter,
     ) {
         override suspend fun updateForeground(
             albumName: String,
@@ -116,6 +162,7 @@ class ToggleAlbumWorkerTest {
         private val gateway: FakeNomediaGateway,
         private val mediaRefreshCoordinator: FakeMediaRefreshCoordinator,
         private val notificationFactory: FakeWorkerNotificationFactory,
+        private val albumStateWriter: FakeAlbumStateWriter,
     ) : WorkerFactory() {
         override fun createWorker(
             appContext: Context,
@@ -132,6 +179,29 @@ class ToggleAlbumWorkerTest {
                 nomediaDocumentGateway = gateway,
                 mediaRefreshCoordinator = mediaRefreshCoordinator,
                 notificationFactory = notificationFactory,
+                albumStateWriter = albumStateWriter,
+            )
+        }
+    }
+
+    private class FakeAlbumStateWriter : AlbumStateWriter {
+        val writes = mutableListOf<AlbumWrite>()
+
+        override suspend fun updateAlbum(
+            directoryKey: String,
+            displayName: String,
+            state: AlbumState,
+            lastAction: ToggleAction,
+            lastFailure: String?,
+            treeUri: String?,
+        ) {
+            writes += AlbumWrite(
+                directoryKey = directoryKey,
+                displayName = displayName,
+                state = state,
+                lastAction = lastAction,
+                lastFailure = lastFailure,
+                treeUri = treeUri,
             )
         }
     }
@@ -163,6 +233,8 @@ class ToggleAlbumWorkerTest {
     }
 
     private class FakeWorkerNotificationFactory : WorkerNotificationFactory {
+        val completions = mutableListOf<CompletionNotification>()
+
         override fun buildProgressInfo(
             albumName: String,
             action: ToggleAction,
@@ -171,5 +243,35 @@ class ToggleAlbumWorkerTest {
             albumName = albumName,
             action = action,
         )
+
+        override fun notifyCompletion(
+            directoryKey: String,
+            albumName: String,
+            action: ToggleAction,
+            result: ToggleResult,
+        ) {
+            completions += CompletionNotification(
+                directoryKey = directoryKey,
+                albumName = albumName,
+                action = action,
+                result = result,
+            )
+        }
     }
 }
+
+private data class AlbumWrite(
+    val directoryKey: String,
+    val displayName: String,
+    val state: AlbumState,
+    val lastAction: ToggleAction,
+    val lastFailure: String?,
+    val treeUri: String?,
+)
+
+private data class CompletionNotification(
+    val directoryKey: String,
+    val albumName: String,
+    val action: ToggleAction,
+    val result: ToggleResult,
+)

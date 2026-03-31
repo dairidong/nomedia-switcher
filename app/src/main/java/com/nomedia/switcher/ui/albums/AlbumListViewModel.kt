@@ -1,0 +1,190 @@
+package com.nomedia.switcher.ui.albums
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.nomedia.switcher.domain.model.AlbumEntry
+import com.nomedia.switcher.domain.model.AlbumId
+import com.nomedia.switcher.domain.model.AlbumState
+import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class AlbumListUiState(
+    val albums: List<AlbumRowState> = emptyList(),
+    val pinHiddenAlbumsToTop: Boolean = true,
+    val progressSheet: ToggleProgressSheetState? = null,
+)
+
+class AlbumListViewModel(
+    albums: Flow<List<AlbumEntry>>,
+    settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
+    private val enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
+    private val setPinHiddenAlbums: suspend (Boolean) -> Unit,
+) : ViewModel() {
+    private val pendingActions = MutableStateFlow<Map<AlbumId, ToggleAction>>(emptyMap())
+    private val progressSheetState = MutableStateFlow<ToggleProgressSheetState?>(null)
+
+    init {
+        viewModelScope.launch {
+            albums.collect { entries ->
+                val completedIds = pendingActions.value.keys.filter { id ->
+                    val entry = entries.firstOrNull { it.id == id }
+                    entry == null || entry.state != AlbumState.Processing
+                }
+                if (completedIds.isEmpty()) {
+                    return@collect
+                }
+                pendingActions.update { current ->
+                    current - completedIds.toSet()
+                }
+                if (progressSheetState.value?.albumId in completedIds) {
+                    progressSheetState.value = null
+                }
+            }
+        }
+    }
+
+    val uiState: StateFlow<AlbumListUiState> = combine(
+        albums,
+        settings,
+        pendingActions,
+        progressSheetState,
+    ) { albumEntries, userSettings, pending, sheet ->
+        AlbumListUiState(
+            albums = albumEntries.map { entry -> entry.toRowState(pending[entry.id]) },
+            pinHiddenAlbumsToTop = userSettings.pinHiddenAlbumsToTop,
+            progressSheet = sheet,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = AlbumListUiState(),
+    )
+
+    fun onToggleClick(album: AlbumRowState) {
+        val action = album.nextAction ?: return
+        pendingActions.update { current ->
+            current + (album.id to action)
+        }
+        progressSheetState.value = ToggleProgressSheetState(
+            albumId = album.id,
+            albumName = album.displayName,
+            action = action,
+            message = progressMessage(action),
+        )
+        viewModelScope.launch {
+            enqueueToggle(album.id.directoryKey, album.displayName, action)
+        }
+    }
+
+    fun dismissProgressSheet() {
+        progressSheetState.value = null
+    }
+
+    fun onPinHiddenChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            setPinHiddenAlbums(enabled)
+        }
+    }
+
+    companion object {
+        fun factory(
+            albums: Flow<List<AlbumEntry>>,
+            settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
+            enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
+            setPinHiddenAlbums: suspend (Boolean) -> Unit,
+        ): ViewModelProvider.Factory {
+            return object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return AlbumListViewModel(
+                        albums = albums,
+                        settings = settings,
+                        enqueueToggle = enqueueToggle,
+                        setPinHiddenAlbums = setPinHiddenAlbums,
+                    ) as T
+                }
+            }
+        }
+    }
+}
+
+private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
+    if (pendingAction != null) {
+        return AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = AlbumState.Processing,
+            isChecked = pendingAction == ToggleAction.Hide,
+            isToggleEnabled = false,
+            nextAction = null,
+            statusText = progressMessage(pendingAction),
+        )
+    }
+
+    return when (state) {
+        AlbumState.Shown -> AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = state,
+            isChecked = false,
+            isToggleEnabled = true,
+            nextAction = ToggleAction.Hide,
+        )
+        AlbumState.Hidden -> AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = state,
+            isChecked = true,
+            isToggleEnabled = true,
+            nextAction = ToggleAction.Show,
+            statusText = "Hidden",
+        )
+        AlbumState.Processing -> AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = state,
+            isChecked = lastAction != ToggleAction.Show,
+            isToggleEnabled = false,
+            nextAction = null,
+            statusText = progressMessage(lastAction ?: ToggleAction.Hide),
+        )
+        AlbumState.Failed -> AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = state,
+            isChecked = lastAction == ToggleAction.Show,
+            isToggleEnabled = true,
+            nextAction = lastAction ?: ToggleAction.Hide,
+            statusText = lastFailure ?: "Last action failed",
+        )
+        AlbumState.HiddenMissingFromScan -> AlbumRowState(
+            id = id,
+            displayName = displayName,
+            directorySummary = id.directoryKey,
+            state = state,
+            isChecked = true,
+            isToggleEnabled = true,
+            nextAction = ToggleAction.Show,
+            statusText = "Hidden, not currently in media library",
+        )
+    }
+}
+
+private fun progressMessage(action: ToggleAction): String = when (action) {
+    ToggleAction.Hide -> "Hiding from media library"
+    ToggleAction.Show -> "Restoring to media library"
+}

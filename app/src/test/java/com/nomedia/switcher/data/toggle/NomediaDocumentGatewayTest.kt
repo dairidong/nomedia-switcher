@@ -33,15 +33,29 @@ class NomediaDocumentGatewayTest {
         assertEquals(ToggleResult.Success, result)
     }
 
+    @Test
+    fun show_still_attempts_delete_when_dotfile_is_not_listable() = runTest {
+        fakeDirectory.existsResult = false
+
+        val result = gateway.show(
+            treeUri = "content://tree/primary%3ADCIM%2FCamera",
+            directoryKey = "DCIM/Camera",
+        )
+
+        assertEquals(listOf(".nomedia"), fakeDirectory.deletedFiles)
+        assertEquals(ToggleResult.Success, result)
+    }
+
     private class FakeNomediaDirectoryAccess : NomediaDirectoryAccess {
         val presentFiles = linkedSetOf<String>()
         val createdFiles = mutableListOf<String>()
         val deletedFiles = mutableListOf<String>()
+        var existsResult: Boolean? = null
 
         override suspend fun exists(
             treeUri: String,
             fileName: String,
-        ): Boolean = fileName in presentFiles
+        ): Boolean = existsResult ?: (fileName in presentFiles)
 
         override suspend fun createFile(
             treeUri: String,
@@ -57,7 +71,7 @@ class NomediaDocumentGatewayTest {
             fileName: String,
         ): Boolean {
             deletedFiles += fileName
-            return presentFiles.remove(fileName)
+            return presentFiles.remove(fileName) || existsResult == false
         }
     }
 }

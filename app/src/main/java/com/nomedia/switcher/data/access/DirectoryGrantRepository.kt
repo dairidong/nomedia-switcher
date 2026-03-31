@@ -1,12 +1,14 @@
 package com.nomedia.switcher.data.access
 
+import com.nomedia.switcher.worker.DirectoryGrantLookup
+
 enum class GrantError {
     RestrictedRoot,
 }
 
 class DirectoryGrantRepository(
     private val directoryGrantDao: DirectoryGrantDao,
-) {
+) : DirectoryGrantLookup {
     suspend fun saveGrant(
         directoryKey: String,
         treeUri: String,
@@ -20,7 +22,7 @@ class DirectoryGrantRepository(
         )
     }
 
-    suspend fun findGrant(directoryKey: String): String? {
+    override suspend fun findGrant(directoryKey: String): String? {
         return directoryGrantDao.findByDirectoryKey(directoryKey)?.treeUri
     }
 
