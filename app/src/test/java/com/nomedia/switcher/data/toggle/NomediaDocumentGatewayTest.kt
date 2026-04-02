@@ -21,6 +21,21 @@ class NomediaDocumentGatewayTest {
     }
 
     @Test
+    fun hide_fails_when_provider_reports_create_success_but_file_still_missing() = runTest {
+        fakeDirectory.keepCreatedFilesInvisible = true
+
+        val result = gateway.hide(
+            treeUri = "content://tree/primary%3ADCIM%2FCamera",
+            directoryKey = "DCIM/Camera",
+        )
+
+        assertEquals(
+            ToggleResult.PermanentFailure("Unable to create .nomedia for DCIM/Camera"),
+            result,
+        )
+    }
+
+    @Test
     fun show_deletes_nomedia_file_when_present() = runTest {
         fakeDirectory.presentFiles += ".nomedia"
 
@@ -51,6 +66,7 @@ class NomediaDocumentGatewayTest {
         val createdFiles = mutableListOf<String>()
         val deletedFiles = mutableListOf<String>()
         var existsResult: Boolean? = null
+        var keepCreatedFilesInvisible: Boolean = false
 
         override suspend fun exists(
             treeUri: String,
@@ -62,7 +78,9 @@ class NomediaDocumentGatewayTest {
             fileName: String,
         ): Boolean {
             createdFiles += fileName
-            presentFiles += fileName
+            if (!keepCreatedFilesInvisible) {
+                presentFiles += fileName
+            }
             return true
         }
 

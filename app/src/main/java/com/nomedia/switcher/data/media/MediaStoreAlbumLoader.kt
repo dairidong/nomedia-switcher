@@ -5,10 +5,15 @@ import android.provider.MediaStore
 
 class MediaStoreAlbumLoader(
     private val scanner: MediaStoreAlbumScanner = MediaStoreAlbumScanner(),
+    private val reservedDirectoryPolicy: SystemReservedDirectoryPolicy = SystemReservedDirectoryPolicy(),
     private val queryRows: (ContentResolver, Array<String>) -> List<MediaStoreAlbumRow> = ::queryMediaRows,
 ) {
     fun load(contentResolver: ContentResolver): List<AlbumCandidate> {
-        return scanner.fromRows(queryRows(contentResolver, scanner.projection))
+        return scanner
+            .fromRows(queryRows(contentResolver, scanner.projection))
+            .filter { candidate ->
+                reservedDirectoryPolicy.isSwitchable(candidate.directoryKey)
+            }
     }
 }
 
@@ -18,19 +23,25 @@ private fun queryMediaRows(
 ): List<MediaStoreAlbumRow> {
     val rows = mutableListOf<MediaStoreAlbumRow>()
     contentResolver.query(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
         projection,
-        null,
-        null,
-        "${MediaStore.Images.Media.DATE_ADDED} DESC",
+        "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)",
+        arrayOf(
+            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+        ),
+        "${MediaStore.MediaColumns.DATE_ADDED} DESC",
     )?.use { cursor ->
-        val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+        val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val bucketIdIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
         val bucketNameIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-        val relativePathIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.RELATIVE_PATH)
+        val relativePathIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
         val volumeNameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.VOLUME_NAME)
+        val displayNameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+        val mediaTypeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
 
         while (cursor.moveToNext()) {
+            val displayName = cursor.getString(displayNameIndex)
             rows += MediaStoreAlbumRow(
                 mediaId = cursor.getLong(idIndex),
                 bucketId = cursor.getString(bucketIdIndex),
@@ -38,6 +49,12 @@ private fun queryMediaRows(
                 relativePath = cursor.getString(relativePathIndex),
                 dataPath = null,
                 volumeName = cursor.getString(volumeNameIndex),
+                displayName = displayName,
+                albumRelativeFilePath = displayName,
+                mediaKind = when (cursor.getInt(mediaTypeIndex)) {
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO -> MediaStoreAlbumScanner.MEDIA_KIND_VIDEO
+                    else -> MediaStoreAlbumScanner.MEDIA_KIND_IMAGE
+                },
             )
         }
     }

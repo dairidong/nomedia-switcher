@@ -2,7 +2,8 @@ package com.nomedia.switcher
 
 import android.app.Application
 import androidx.work.WorkManager
-import com.nomedia.switcher.data.local.album.AlbumRecordEntity
+import com.nomedia.switcher.data.cover.AlbumCoverFallbackResolver
+import com.nomedia.switcher.data.cover.SafTreeDocumentLookup
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
 import com.nomedia.switcher.data.local.AppDatabase
 import com.nomedia.switcher.data.local.album.RoomAlbumStateWriter
@@ -12,6 +13,7 @@ import com.nomedia.switcher.data.toggle.NoopMediaRefreshCoordinator
 import com.nomedia.switcher.data.toggle.NomediaDocumentGateway
 import com.nomedia.switcher.data.toggle.SafNomediaDirectoryAccess
 import com.nomedia.switcher.domain.usecase.EnqueueToggleAlbumUseCase
+import com.nomedia.switcher.domain.usecase.PersistScannedAlbumCoverReferencesUseCase
 import com.nomedia.switcher.domain.usecase.RecoverInterruptedAlbumTogglesUseCase
 import com.nomedia.switcher.domain.usecase.SetHiddenAlbumsPinnedUseCase
 import com.nomedia.switcher.worker.DefaultWorkerNotificationFactory
@@ -27,6 +29,12 @@ class AppContainer(
     val mediaStoreAlbumLoader = MediaStoreAlbumLoader()
     val userSettingsRepository = UserSettingsRepository.create(application)
     val directoryGrantRepository = DirectoryGrantRepository(database.directoryGrantDao())
+    val albumCoverFallbackResolver = AlbumCoverFallbackResolver(
+        documentLookup = SafTreeDocumentLookup(application),
+    )
+    val persistScannedAlbumCoverReferencesUseCase = PersistScannedAlbumCoverReferencesUseCase(
+        database.albumRecordDao(),
+    )
     val nomediaDocumentGateway = NomediaDocumentGateway(
         directoryAccess = SafNomediaDirectoryAccess(application),
     )

@@ -1,5 +1,7 @@
 package com.nomedia.switcher.ui.albums
+
 import com.nomedia.switcher.data.local.settings.UserSettings
+import com.nomedia.switcher.data.cover.ResolvedAlbumCover
 import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
@@ -14,6 +16,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -54,10 +58,79 @@ class AlbumListViewModelTest {
 
         assertEquals("Camera", viewModel.uiState.value.progressSheet?.albumName)
         assertEquals(AlbumState.Processing, viewModel.uiState.value.albums.single().state)
+        assertTrue(viewModel.uiState.value.albums.single().showsInlineProgress)
         assertEquals(
             listOf(Triple("DCIM/Camera", "Camera", ToggleAction.Hide)),
             toggleRequests,
         )
+    }
+
+    @Test
+    fun row_state_exposes_cover_uri_from_album_entry() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Travel",
+                    state = AlbumState.Hidden,
+                    coverUri = "content://media/external/images/media/303",
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            "content://media/external/images/media/303",
+            viewModel.uiState.value.albums.single().coverUri,
+        )
+        assertFalse(viewModel.uiState.value.albums.single().showsInlineProgress)
+    }
+
+    @Test
+    fun uiState_uses_fallback_cover_when_live_scan_cover_is_missing() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Movies/Trips",
+                    displayName = "Trips",
+                    state = AlbumState.HiddenMissingFromScan,
+                    coverUri = null,
+                    coverRelativeFilePath = "Clips/VID_0007.mp4",
+                    coverMediaKind = "video",
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+            resolveFallbackCover = { treeUri, relativeFilePath, mediaKind ->
+                if (treeUri == null || relativeFilePath == null || mediaKind == null) {
+                    null
+                } else {
+                    ResolvedAlbumCover(
+                        uri = "content://documents/trips/video",
+                        mediaKind = mediaKind,
+                    )
+                }
+            },
+        )
+
+        advanceUntilIdle()
+
+        val row = viewModel.uiState.value.albums.single()
+        assertEquals("content://documents/trips/video", row.coverUri)
+        assertEquals("video", row.coverMediaKind)
     }
 
     @Test
@@ -129,6 +202,9 @@ class AlbumListViewModelTest {
         directoryKey: String,
         displayName: String,
         state: AlbumState,
+        coverUri: String? = null,
+        coverRelativeFilePath: String? = null,
+        coverMediaKind: String? = null,
         lastAction: ToggleAction? = null,
         lastFailure: String? = null,
     ): AlbumEntry {
@@ -136,6 +212,9 @@ class AlbumListViewModelTest {
             id = AlbumId(directoryKey),
             displayName = displayName,
             state = state,
+            coverUri = coverUri,
+            coverRelativeFilePath = coverRelativeFilePath,
+            coverMediaKind = coverMediaKind,
             treeUri = "content://tree/${directoryKey.replace('/', '_')}",
             lastAction = lastAction,
             lastFailure = lastFailure,

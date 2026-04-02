@@ -3,6 +3,7 @@ package com.nomedia.switcher.data.toggle
 import android.content.ContentProvider
 import android.content.ContentValues
 import android.database.Cursor
+import android.database.MatrixCursor
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
@@ -31,6 +32,22 @@ class SafNomediaDirectoryAccessTest {
         assertEquals(false, exists)
     }
 
+    @Test
+    fun exists_returns_false_when_provider_returns_a_different_document_id() = kotlinx.coroutines.test.runTest {
+        ShadowContentResolver.registerProviderInternal(
+            AUTHORITY,
+            MismatchedDocumentProvider(),
+        )
+        val access = SafNomediaDirectoryAccess(ApplicationProvider.getApplicationContext())
+
+        val exists = access.exists(
+            treeUri = "content://$AUTHORITY/tree/primary%3APictures%2FScreenshots",
+            fileName = ".nomedia",
+        )
+
+        assertEquals(false, exists)
+    }
+
     private class ThrowingQueryProvider : ContentProvider() {
         override fun onCreate(): Boolean = true
 
@@ -44,6 +61,41 @@ class SafNomediaDirectoryAccessTest {
             throw IllegalArgumentException(
                 "Failed to determine if primary:Pictures/Screenshots/.nomedia is child of primary:Pictures/Screenshots",
             )
+        }
+
+        override fun getType(uri: Uri): String? = null
+
+        override fun insert(uri: Uri, values: ContentValues?): Uri? = null
+
+        override fun delete(
+            uri: Uri,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+        ): Int = 0
+
+        override fun update(
+            uri: Uri,
+            values: ContentValues?,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+        ): Int = 0
+    }
+
+    private class MismatchedDocumentProvider : ContentProvider() {
+        override fun onCreate(): Boolean = true
+
+        override fun query(
+            uri: Uri,
+            projection: Array<out String>?,
+            selection: String?,
+            selectionArgs: Array<out String>?,
+            sortOrder: String?,
+        ): Cursor {
+            return MatrixCursor(
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+            ).apply {
+                addRow(arrayOf("primary:Pictures/Screenshots"))
+            }
         }
 
         override fun getType(uri: Uri): String? = null

@@ -3,11 +3,13 @@ package com.nomedia.switcher.ui.albums
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nomedia.switcher.data.cover.ResolvedAlbumCover
 import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AlbumListUiState(
     val albums: List<AlbumRowState> = emptyList(),
@@ -28,13 +31,20 @@ class AlbumListViewModel(
     settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
     private val enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
     private val setPinHiddenAlbums: suspend (Boolean) -> Unit,
+    private val resolveFallbackCover: suspend (String, String?, String?) -> ResolvedAlbumCover? = { _, _, _ -> null },
 ) : ViewModel() {
+    private val albumEntries = albums.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList(),
+    )
     private val pendingActions = MutableStateFlow<Map<AlbumId, ToggleAction>>(emptyMap())
     private val progressSheetState = MutableStateFlow<ToggleProgressSheetState?>(null)
+    private val fallbackCovers = MutableStateFlow<Map<AlbumId, ResolvedAlbumCover>>(emptyMap())
 
     init {
         viewModelScope.launch {
-            albums.collect { entries ->
+            albumEntries.collect { entries ->
                 val completedIds = pendingActions.value.keys.filter { id ->
                     val entry = entries.firstOrNull { it.id == id }
                     entry == null || entry.state != AlbumState.Processing
@@ -50,16 +60,41 @@ class AlbumListViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            albumEntries.collect { entries ->
+                val resolvedFallbacks = withContext(Dispatchers.IO) {
+                    entries.mapNotNull { entry ->
+                        val treeUri = entry.treeUri ?: return@mapNotNull null
+                        if (entry.coverUri != null) {
+                            return@mapNotNull null
+                        }
+                        val resolved = resolveFallbackCover(
+                            treeUri,
+                            entry.coverRelativeFilePath,
+                            entry.coverMediaKind,
+                        ) ?: return@mapNotNull null
+                        entry.id to resolved
+                    }.toMap()
+                }
+                fallbackCovers.value = resolvedFallbacks
+            }
+        }
     }
 
     val uiState: StateFlow<AlbumListUiState> = combine(
-        albums,
+        albumEntries,
         settings,
         pendingActions,
         progressSheetState,
-    ) { albumEntries, userSettings, pending, sheet ->
+        fallbackCovers,
+    ) { albumEntries, userSettings, pending, sheet, resolvedFallbacks ->
         AlbumListUiState(
-            albums = albumEntries.map { entry -> entry.toRowState(pending[entry.id]) },
+            albums = albumEntries.map { entry ->
+                entry.toRowState(
+                    pendingAction = pending[entry.id],
+                    fallbackCover = resolvedFallbacks[entry.id],
+                )
+            },
             pinHiddenAlbumsToTop = userSettings.pinHiddenAlbumsToTop,
             progressSheet = sheet,
         )
@@ -101,6 +136,7 @@ class AlbumListViewModel(
             settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
             enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
             setPinHiddenAlbums: suspend (Boolean) -> Unit,
+            resolveFallbackCover: suspend (String, String?, String?) -> ResolvedAlbumCover? = { _, _, _ -> null },
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -110,6 +146,7 @@ class AlbumListViewModel(
                         settings = settings,
                         enqueueToggle = enqueueToggle,
                         setPinHiddenAlbums = setPinHiddenAlbums,
+                        resolveFallbackCover = resolveFallbackCover,
                     ) as T
                 }
             }
@@ -117,17 +154,26 @@ class AlbumListViewModel(
     }
 }
 
-private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
+private fun AlbumEntry.toRowState(
+    pendingAction: ToggleAction?,
+    fallbackCover: ResolvedAlbumCover?,
+): AlbumRowState {
+    val resolvedCoverUri = coverUri ?: fallbackCover?.uri
+    val resolvedCoverMediaKind = coverMediaKind ?: fallbackCover?.mediaKind
+
     if (pendingAction != null) {
         return AlbumRowState(
             id = id,
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = AlbumState.Processing,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = pendingAction == ToggleAction.Hide,
             isToggleEnabled = false,
             nextAction = null,
             statusText = progressMessage(pendingAction),
+            showsInlineProgress = true,
         )
     }
 
@@ -137,6 +183,8 @@ private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = state,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = false,
             isToggleEnabled = true,
             nextAction = ToggleAction.Hide,
@@ -146,6 +194,8 @@ private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = state,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = true,
             isToggleEnabled = true,
             nextAction = ToggleAction.Show,
@@ -156,16 +206,21 @@ private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = state,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = lastAction != ToggleAction.Show,
             isToggleEnabled = false,
             nextAction = null,
             statusText = progressMessage(lastAction ?: ToggleAction.Hide),
+            showsInlineProgress = true,
         )
         AlbumState.Failed -> AlbumRowState(
             id = id,
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = state,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = lastAction == ToggleAction.Show,
             isToggleEnabled = true,
             nextAction = lastAction ?: ToggleAction.Hide,
@@ -176,6 +231,8 @@ private fun AlbumEntry.toRowState(pendingAction: ToggleAction?): AlbumRowState {
             displayName = displayName,
             directorySummary = id.directoryKey,
             state = state,
+            coverUri = resolvedCoverUri,
+            coverMediaKind = resolvedCoverMediaKind,
             isChecked = true,
             isToggleEnabled = true,
             nextAction = ToggleAction.Show,

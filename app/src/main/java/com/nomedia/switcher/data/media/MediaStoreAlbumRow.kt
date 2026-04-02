@@ -7,4 +7,7 @@ data class MediaStoreAlbumRow(
     val relativePath: String?,
     val dataPath: String?,
     val volumeName: String?,
+    val displayName: String?,
+    val albumRelativeFilePath: String?,
+    val mediaKind: String,
 )

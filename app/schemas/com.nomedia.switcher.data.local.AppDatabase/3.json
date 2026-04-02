@@ -1,0 +1,132 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "bc9ba8dba8c64540722434fa90776cc7",
+    "entities": [
+      {
+        "tableName": "album_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`directoryKey` TEXT NOT NULL, `displayName` TEXT NOT NULL, `state` TEXT NOT NULL, `treeUri` TEXT, `lastAction` TEXT, `lastFailure` TEXT, `seenInLastScan` INTEGER NOT NULL, `updatedAtEpochMs` INTEGER NOT NULL, `coverRelativeFilePath` TEXT, `coverDisplayName` TEXT, `coverMediaKind` TEXT, `coverUpdatedAtEpochMs` INTEGER, PRIMARY KEY(`directoryKey`))",
+        "fields": [
+          {
+            "fieldPath": "directoryKey",
+            "columnName": "directoryKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "treeUri",
+            "columnName": "treeUri",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "lastAction",
+            "columnName": "lastAction",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "lastFailure",
+            "columnName": "lastFailure",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "seenInLastScan",
+            "columnName": "seenInLastScan",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMs",
+            "columnName": "updatedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coverRelativeFilePath",
+            "columnName": "coverRelativeFilePath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "coverDisplayName",
+            "columnName": "coverDisplayName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "coverMediaKind",
+            "columnName": "coverMediaKind",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "coverUpdatedAtEpochMs",
+            "columnName": "coverUpdatedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "directoryKey"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "directory_grants",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`directoryKey` TEXT NOT NULL, `treeUri` TEXT NOT NULL, `persistedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`directoryKey`))",
+        "fields": [
+          {
+            "fieldPath": "directoryKey",
+            "columnName": "directoryKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "treeUri",
+            "columnName": "treeUri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "persistedAtEpochMs",
+            "columnName": "persistedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "directoryKey"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bc9ba8dba8c64540722434fa90776cc7')"
+    ]
+  }
+}

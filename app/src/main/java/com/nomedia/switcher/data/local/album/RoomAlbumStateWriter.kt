@@ -6,6 +6,7 @@ import com.nomedia.switcher.domain.usecase.AlbumStateWriter
 
 class RoomAlbumStateWriter(
     private val albumRecordDao: AlbumRecordDao,
+    private val currentTimeProvider: () -> Long = System::currentTimeMillis,
 ) : AlbumStateWriter {
     override suspend fun updateAlbum(
         directoryKey: String,
@@ -27,7 +28,11 @@ class RoomAlbumStateWriter(
                 lastAction = lastAction,
                 lastFailure = lastFailure,
                 seenInLastScan = existing?.seenInLastScan ?: true,
-                updatedAtEpochMs = System.currentTimeMillis(),
+                updatedAtEpochMs = currentTimeProvider(),
+                coverRelativeFilePath = existing?.coverRelativeFilePath,
+                coverDisplayName = existing?.coverDisplayName,
+                coverMediaKind = existing?.coverMediaKind,
+                coverUpdatedAtEpochMs = existing?.coverUpdatedAtEpochMs,
             ),
         )
     }

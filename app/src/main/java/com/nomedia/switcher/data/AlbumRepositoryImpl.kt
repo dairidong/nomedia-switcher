@@ -2,12 +2,15 @@ package com.nomedia.switcher.data
 
 import com.nomedia.switcher.data.local.album.AlbumRecordEntity
 import com.nomedia.switcher.data.media.AlbumCandidate
+import com.nomedia.switcher.data.media.SystemReservedDirectoryPolicy
 import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.repository.AlbumRepository
 
-class AlbumRepositoryImpl : AlbumRepository {
+class AlbumRepositoryImpl(
+    private val reservedDirectoryPolicy: SystemReservedDirectoryPolicy = SystemReservedDirectoryPolicy(),
+) : AlbumRepository {
     override fun merge(
         records: List<AlbumRecordEntity>,
         scan: List<AlbumCandidate>,
@@ -18,6 +21,9 @@ class AlbumRepositoryImpl : AlbumRepository {
         val scannedByDirectory = scan.associateBy { it.directoryKey }
 
         return (localByDirectory.keys + scannedByDirectory.keys)
+            .filter { directoryKey ->
+                reservedDirectoryPolicy.isSwitchable(directoryKey)
+            }
             .map { directoryKey ->
                 val local = localByDirectory[directoryKey]
                 val scanned = scannedByDirectory[directoryKey]
@@ -30,6 +36,9 @@ class AlbumRepositoryImpl : AlbumRepository {
                         ?: directoryKey.substringAfterLast('/'),
                     state = mergedState(local, seenInScan, scanCompleted),
                     treeUri = local?.treeUri,
+                    coverUri = scanned?.coverUri,
+                    coverRelativeFilePath = local?.coverRelativeFilePath,
+                    coverMediaKind = scanned?.coverMediaKind ?: local?.coverMediaKind,
                     lastAction = local?.lastAction,
                     lastFailure = local?.lastFailure,
                     seenInLastScan = seenInScan,

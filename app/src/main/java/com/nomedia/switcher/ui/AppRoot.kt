@@ -3,6 +3,7 @@ package com.nomedia.switcher.ui
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,7 +20,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nomedia.switcher.NoMediaApplication
 import com.nomedia.switcher.domain.model.AlbumId
@@ -55,9 +55,11 @@ fun AppRoot(
     var hasMediaPermission by rememberSaveable { mutableStateOf(context.hasMediaPermission()) }
     var pendingGrantRequest by remember { mutableStateOf<ToggleRequestResolution.RequestGrant?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        hasMediaPermission = granted
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grantResults ->
+        hasMediaPermission = requiredMediaPermissions().all { permission ->
+            grantResults[permission] == true || context.hasPermission(permission)
+        }
     }
     val albumEntries = remember(container) {
         combine(
@@ -85,7 +87,7 @@ fun AppRoot(
         if (!hasMediaPermission) {
             scanResults.value = emptyList()
             scanCompleted.value = false
-            permissionLauncher.launch(requiredMediaPermission())
+            permissionLauncher.launch(requiredMediaPermissions())
             return@LaunchedEffect
         }
 
@@ -94,6 +96,9 @@ fun AppRoot(
         }
         scanResults.value = albums
         scanCompleted.value = true
+        withContext(Dispatchers.IO) {
+            container.persistScannedAlbumCoverReferencesUseCase.persist(albums)
+        }
     }
 
     val viewModel: AlbumListViewModel = viewModel(
@@ -102,6 +107,7 @@ fun AppRoot(
             settings = container.userSettingsRepository.settings,
             enqueueToggle = container.enqueueToggleAlbumUseCase::invoke,
             setPinHiddenAlbums = container.setHiddenAlbumsPinnedUseCase::invoke,
+            resolveFallbackCover = container.albumCoverFallbackResolver::resolve,
         ),
     )
     val grantLauncher = rememberLauncherForActivityResult(
@@ -237,17 +243,21 @@ private fun ToggleRequestResolution.RequestGrant.toAlbumRowState(): AlbumRowStat
     )
 }
 
-private fun requiredMediaPermission(): String {
+private fun requiredMediaPermissions(): Array<String> {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_IMAGES
+        arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
+        )
     } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 }
 
 private fun android.content.Context.hasMediaPermission(): Boolean {
-    return ContextCompat.checkSelfPermission(
-        this,
-        requiredMediaPermission(),
-    ) == PackageManager.PERMISSION_GRANTED
+    return requiredMediaPermissions().all(::hasPermission)
+}
+
+private fun android.content.Context.hasPermission(permission: String): Boolean {
+    return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }

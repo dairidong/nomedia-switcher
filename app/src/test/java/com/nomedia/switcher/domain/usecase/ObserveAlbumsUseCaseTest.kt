@@ -34,8 +34,8 @@ class ObserveAlbumsUseCaseTest {
         val merged = useCase.merge(
             records = listOf(
                 localAlbum(
-                    directoryKey = "DCIM/Camera",
-                    displayName = "Camera",
+                    directoryKey = "Pictures/Processing",
+                    displayName = "Processing",
                     state = AlbumState.Processing,
                 ),
                 localAlbum(
@@ -79,15 +79,16 @@ class ObserveAlbumsUseCaseTest {
         val merged = useCase.merge(
             records = listOf(
                 localAlbum(
-                    directoryKey = "DCIM/Camera",
-                    displayName = "Old Camera",
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Old Travel",
                     state = AlbumState.Hidden,
                 ),
             ),
             scan = listOf(
                 scannedAlbum(
-                    directoryKey = "DCIM/Camera",
-                    bucketName = "Camera",
+                    directoryKey = "Pictures/Travel",
+                    bucketName = "Travel",
+                    coverUri = "content://media/external/images/media/202",
                 ),
             ),
             pinHidden = true,
@@ -95,9 +96,14 @@ class ObserveAlbumsUseCaseTest {
 
         assertEquals(
             listOf(
-                Triple(AlbumId("DCIM/Camera"), "Camera", AlbumState.Hidden),
+                listOf(
+                    AlbumId("Pictures/Travel"),
+                    "Travel",
+                    AlbumState.Hidden,
+                    "content://media/external/images/media/202",
+                ),
             ),
-            merged.map { Triple(it.id, it.displayName, it.state) },
+            merged.map { listOf(it.id, it.displayName, it.state, it.coverUri) },
         )
     }
 
@@ -160,10 +166,33 @@ class ObserveAlbumsUseCaseTest {
         assertEquals(AlbumState.HiddenMissingFromScan, merged.single().state)
     }
 
+    @Test
+    fun local_only_album_keeps_persisted_cover_reference_for_fallback_resolution() = runTest {
+        val merged = useCase.merge(
+            records = listOf(
+                localAlbum(
+                    directoryKey = "Pictures/Archive",
+                    displayName = "Archive",
+                    state = AlbumState.Hidden,
+                    coverRelativeFilePath = "Shots/IMG_0042.jpg",
+                    coverMediaKind = "image",
+                ),
+            ),
+            scan = emptyList(),
+            pinHidden = true,
+            scanCompleted = true,
+        )
+
+        assertEquals("Shots/IMG_0042.jpg", merged.single().coverRelativeFilePath)
+        assertEquals("image", merged.single().coverMediaKind)
+    }
+
     private fun localAlbum(
         directoryKey: String,
         displayName: String,
         state: AlbumState,
+        coverRelativeFilePath: String? = null,
+        coverMediaKind: String? = null,
     ): AlbumRecordEntity {
         return AlbumRecordEntity(
             directoryKey = directoryKey,
@@ -174,18 +203,22 @@ class ObserveAlbumsUseCaseTest {
             lastFailure = null,
             seenInLastScan = state != AlbumState.HiddenMissingFromScan,
             updatedAtEpochMs = 1L,
+            coverRelativeFilePath = coverRelativeFilePath,
+            coverMediaKind = coverMediaKind,
         )
     }
 
     private fun scannedAlbum(
         directoryKey: String,
         bucketName: String,
+        coverUri: String? = null,
     ): AlbumCandidate {
         return AlbumCandidate(
             bucketId = directoryKey.hashCode().toString(),
             bucketName = bucketName,
             directoryKey = directoryKey,
             volumeName = "external_primary",
+            coverUri = coverUri,
         )
     }
 }

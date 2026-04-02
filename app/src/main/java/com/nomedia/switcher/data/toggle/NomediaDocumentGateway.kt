@@ -25,7 +25,8 @@ class NomediaDocumentGateway(
             return ToggleResult.Success
         }
 
-        return if (directoryAccess.createFile(treeUri, NOMEDIA_FILE)) {
+        val created = directoryAccess.createFile(treeUri, NOMEDIA_FILE)
+        return if (created && directoryAccess.exists(treeUri, NOMEDIA_FILE)) {
             ToggleResult.Success
         } else {
             ToggleResult.PermanentFailure("Unable to create .nomedia for $directoryKey")
@@ -56,7 +57,8 @@ class SafNomediaDirectoryAccess(
         fileName: String,
     ): Boolean {
         val treeDocumentUri = Uri.parse(treeUri)
-        val documentUri = buildChildDocumentUri(treeDocumentUri, fileName)
+        val childDocumentId = buildChildDocumentId(treeDocumentUri, fileName)
+        val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeDocumentUri, childDocumentId)
         return try {
             context.contentResolver.query(
                 documentUri,
@@ -65,7 +67,14 @@ class SafNomediaDirectoryAccess(
                 null,
                 null,
             )?.use { cursor ->
-                cursor.moveToFirst()
+                if (!cursor.moveToFirst()) {
+                    return@use false
+                }
+                val documentIdIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                if (documentIdIndex == -1) {
+                    return@use false
+                }
+                cursor.getString(documentIdIndex) == childDocumentId
             } == true
         } catch (_: FileNotFoundException) {
             false
@@ -81,7 +90,16 @@ class SafNomediaDirectoryAccess(
         fileName: String,
     ): Boolean {
         val directory = resolveTree(treeUri) ?: return false
-        return directory.findFile(fileName) != null || directory.createFile("application/octet-stream", fileName) != null
+        val existing = directory.findFile(fileName)
+        if (existing != null) {
+            return true
+        }
+
+        val created = directory.createFile("application/octet-stream", fileName)
+        if (created == null) {
+            return false
+        }
+        return true
     }
 
     override suspend fun deleteFile(
@@ -104,15 +122,27 @@ class SafNomediaDirectoryAccess(
     private fun resolveTree(treeUri: String): DocumentFile? {
         return DocumentFile.fromTreeUri(context, Uri.parse(treeUri))
     }
+}
 
-    private fun buildChildDocumentUri(
-        treeUri: Uri,
-        fileName: String,
-    ): Uri {
-        val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
-        return DocumentsContract.buildDocumentUriUsingTree(
-            treeUri,
-            "$treeDocumentId/$fileName",
-        )
+internal fun buildChildDocumentUri(
+    treeUri: Uri,
+    relativePath: String,
+): Uri {
+    return DocumentsContract.buildDocumentUriUsingTree(
+        treeUri,
+        buildChildDocumentId(treeUri, relativePath),
+    )
+}
+
+internal fun buildChildDocumentId(
+    treeUri: Uri,
+    relativePath: String,
+): String {
+    val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+    val normalizedRelativePath = relativePath.trim('/')
+    return if (normalizedRelativePath.isEmpty()) {
+        treeDocumentId
+    } else {
+        "$treeDocumentId/$normalizedRelativePath"
     }
 }
