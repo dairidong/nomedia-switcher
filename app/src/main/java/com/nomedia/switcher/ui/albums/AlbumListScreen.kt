@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.nomedia.switcher.R
 import com.nomedia.switcher.ui.common.AlbumCover
 import com.nomedia.switcher.ui.common.StatusChip
+import com.nomedia.switcher.ui.resolve
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,9 +137,9 @@ private fun AlbumRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                album.statusText?.let { status ->
+                album.statusMessage?.let { status ->
                     StatusChip(
-                        text = status,
+                        text = status.resolve(),
                         state = album.state,
                     )
                 }

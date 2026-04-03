@@ -19,12 +19,14 @@ import androidx.compose.ui.unit.dp
 import com.nomedia.switcher.R
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
+import com.nomedia.switcher.ui.resolve
 
 data class ToggleProgressSheetState(
     val albumId: AlbumId,
     val albumName: String,
     val action: ToggleAction,
-    val message: String,
+    val message: UiMessage,
 )
 
 @Composable
@@ -54,7 +56,7 @@ fun ToggleProgressSheet(
                 strokeWidth = 3.dp,
             )
             Text(
-                text = state.message,
+                text = state.message.resolve(),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }

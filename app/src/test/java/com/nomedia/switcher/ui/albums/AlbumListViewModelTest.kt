@@ -6,6 +6,7 @@ import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +58,9 @@ class AlbumListViewModelTest {
         advanceUntilIdle()
 
         assertEquals("Camera", viewModel.uiState.value.progressSheet?.albumName)
+        assertEquals(UiMessage.HideInProgress, viewModel.uiState.value.progressSheet?.message)
         assertEquals(AlbumState.Processing, viewModel.uiState.value.albums.single().state)
+        assertEquals(UiMessage.HideInProgress, viewModel.uiState.value.albums.single().statusMessage)
         assertTrue(viewModel.uiState.value.albums.single().showsInlineProgress)
         assertEquals(
             listOf(Triple("DCIM/Camera", "Camera", ToggleAction.Hide)),
@@ -92,6 +95,31 @@ class AlbumListViewModelTest {
             viewModel.uiState.value.albums.single().coverUri,
         )
         assertFalse(viewModel.uiState.value.albums.single().showsInlineProgress)
+    }
+
+    @Test
+    fun hidden_album_row_uses_hidden_message_key() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Travel",
+                    state = AlbumState.Hidden,
+                    coverUri = "content://media/external/images/media/303",
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(UiMessage.AlbumHidden, viewModel.uiState.value.albums.single().statusMessage)
     }
 
     @Test
@@ -171,8 +199,8 @@ class AlbumListViewModelTest {
         assertEquals(null, viewModel.uiState.value.progressSheet)
         assertEquals(AlbumState.Failed, viewModel.uiState.value.albums.single().state)
         assertEquals(
-            "Missing directory grant",
-            viewModel.uiState.value.albums.single().statusText,
+            UiMessage.Raw("Missing directory grant"),
+            viewModel.uiState.value.albums.single().statusMessage,
         )
     }
 

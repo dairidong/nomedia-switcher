@@ -18,4 +18,8 @@
     <string name="toggle_show_success_title">已恢复%1$s</string>
     <string name="toggle_failure_title">无法更新%1$s</string>
     <string name="toggle_success_message">图集可见性已更新</string>
+    <string name="album_status_hidden">已隐藏</string>
+    <string name="album_status_last_action_failed">上次操作失败</string>
+    <string name="album_status_hide_in_progress">正在从媒体库隐藏</string>
+    <string name="album_status_show_in_progress">正在恢复到媒体库</string>
 </resources>

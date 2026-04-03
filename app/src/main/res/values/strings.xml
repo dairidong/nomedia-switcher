@@ -19,4 +19,8 @@
     <string name="toggle_show_success_title">Restored %1$s</string>
     <string name="toggle_failure_title">Couldn\'t update %1$s</string>
     <string name="toggle_success_message">Album visibility was updated</string>
+    <string name="album_status_hidden">Hidden</string>
+    <string name="album_status_last_action_failed">Last action failed</string>
+    <string name="album_status_hide_in_progress">Hiding from media library</string>
+    <string name="album_status_show_in_progress">Restoring to media library</string>
 </resources>

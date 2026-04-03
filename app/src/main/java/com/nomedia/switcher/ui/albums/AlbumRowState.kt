@@ -3,6 +3,7 @@ package com.nomedia.switcher.ui.albums
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
 
 data class AlbumRowState(
     val id: AlbumId,
@@ -14,7 +15,7 @@ data class AlbumRowState(
     val isChecked: Boolean,
     val isToggleEnabled: Boolean,
     val nextAction: ToggleAction?,
-    val statusText: String? = null,
+    val statusMessage: UiMessage? = null,
     val showsInlineProgress: Boolean = false,
     val isHighlighted: Boolean = false,
 )

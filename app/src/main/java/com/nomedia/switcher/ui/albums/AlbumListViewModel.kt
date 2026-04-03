@@ -8,6 +8,7 @@ import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -172,7 +173,7 @@ private fun AlbumEntry.toRowState(
             isChecked = pendingAction == ToggleAction.Hide,
             isToggleEnabled = false,
             nextAction = null,
-            statusText = progressMessage(pendingAction),
+            statusMessage = progressMessage(pendingAction),
             showsInlineProgress = true,
         )
     }
@@ -199,7 +200,7 @@ private fun AlbumEntry.toRowState(
             isChecked = true,
             isToggleEnabled = true,
             nextAction = ToggleAction.Show,
-            statusText = "Hidden",
+            statusMessage = UiMessage.AlbumHidden,
         )
         AlbumState.Processing -> AlbumRowState(
             id = id,
@@ -211,7 +212,7 @@ private fun AlbumEntry.toRowState(
             isChecked = lastAction != ToggleAction.Show,
             isToggleEnabled = false,
             nextAction = null,
-            statusText = progressMessage(lastAction ?: ToggleAction.Hide),
+            statusMessage = progressMessage(lastAction ?: ToggleAction.Hide),
             showsInlineProgress = true,
         )
         AlbumState.Failed -> AlbumRowState(
@@ -224,7 +225,7 @@ private fun AlbumEntry.toRowState(
             isChecked = lastAction == ToggleAction.Show,
             isToggleEnabled = true,
             nextAction = lastAction ?: ToggleAction.Hide,
-            statusText = lastFailure ?: "Last action failed",
+            statusMessage = lastFailure?.let(UiMessage::Raw) ?: UiMessage.LastActionFailed,
         )
         AlbumState.HiddenMissingFromScan -> AlbumRowState(
             id = id,
@@ -236,12 +237,12 @@ private fun AlbumEntry.toRowState(
             isChecked = true,
             isToggleEnabled = true,
             nextAction = ToggleAction.Show,
-            statusText = "Hidden",
+            statusMessage = UiMessage.AlbumHidden,
         )
     }
 }
 
-private fun progressMessage(action: ToggleAction): String = when (action) {
-    ToggleAction.Hide -> "Hiding from media library"
-    ToggleAction.Show -> "Restoring to media library"
+private fun progressMessage(action: ToggleAction): UiMessage = when (action) {
+    ToggleAction.Hide -> UiMessage.HideInProgress
+    ToggleAction.Show -> UiMessage.ShowInProgress
 }
