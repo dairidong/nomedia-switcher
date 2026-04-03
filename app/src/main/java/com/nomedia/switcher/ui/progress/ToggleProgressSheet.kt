@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nomedia.switcher.R
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.ToggleAction
 
@@ -57,12 +59,12 @@ fun ToggleProgressSheet(
             )
         }
         Text(
-            text = "Large albums can take a while. You can hide this panel and let the task continue.",
+            text = stringResource(id = R.string.toggle_progress_helper),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(onClick = onHide) {
-            Text(text = "Hide panel")
+            Text(text = stringResource(id = R.string.toggle_progress_hide_panel))
         }
     }
 }

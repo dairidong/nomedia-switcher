@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NoMedia Switcher</string>
+    <string name="album_list_title">Albums</string>
+    <string name="album_list_empty_state">No switchable albums yet</string>
+    <string name="album_list_opened_from_notification">Opened from notification</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_pin_hidden_title">Pin hidden albums to top</string>
+    <string name="settings_pin_hidden_helper">Keep locally hidden albums easy to reach on startup.</string>
+    <string name="toggle_progress_helper">Large albums can take a while. You can hide this panel and let the task continue.</string>
+    <string name="toggle_progress_hide_panel">Hide panel</string>
     <string name="toggle_progress_channel_name">Toggle progress</string>
     <string name="toggle_result_channel_name">Toggle results</string>
     <string name="toggle_progress_message">Updating album visibility</string>

@@ -4,9 +4,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.test.platform.app.InstrumentationRegistry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.R
 import com.nomedia.switcher.ui.theme.NoMediaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -14,6 +16,7 @@ import org.junit.Test
 class AlbumListScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
     fun hidden_missing_album_shows_recoverable_status() {
@@ -72,7 +75,33 @@ class AlbumListScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Opened from notification").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.album_list_opened_from_notification))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun album_list_uses_resource_text_for_static_labels() {
+        composeTestRule.setContent {
+            NoMediaTheme {
+                AlbumListScreen(
+                    state = AlbumListUiState(),
+                    onToggleClick = {},
+                    onOpenSettings = {},
+                    highlightedAlbumId = null,
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.album_list_title))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.settings_title))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.album_list_empty_state))
+            .assertIsDisplayed()
     }
 
     @Test

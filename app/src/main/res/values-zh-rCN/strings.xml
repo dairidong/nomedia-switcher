@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NoMedia Switcher</string>
+    <string name="album_list_title">图集</string>
+    <string name="album_list_empty_state">暂无可切换的图集</string>
+    <string name="album_list_opened_from_notification">从通知中打开</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_pin_hidden_title">将已隐藏图集置顶</string>
+    <string name="settings_pin_hidden_helper">让本地已隐藏图集在启动时更容易找到。</string>
+    <string name="toggle_progress_helper">大图集可能需要一些时间。你可以隐藏此面板，让任务继续。</string>
+    <string name="toggle_progress_hide_panel">隐藏面板</string>
+    <string name="toggle_progress_channel_name">切换进度</string>
+    <string name="toggle_result_channel_name">切换结果</string>
+    <string name="toggle_progress_message">正在更新图集可见性</string>
+    <string name="toggle_hide_progress_title">正在隐藏%1$s</string>
+    <string name="toggle_show_progress_title">正在恢复%1$s</string>
+    <string name="toggle_hide_success_title">已隐藏%1$s</string>
+    <string name="toggle_show_success_title">已恢复%1$s</string>
+    <string name="toggle_failure_title">无法更新%1$s</string>
+    <string name="toggle_success_message">图集可见性已更新</string>
+</resources>

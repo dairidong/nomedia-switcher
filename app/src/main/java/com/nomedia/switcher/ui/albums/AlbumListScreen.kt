@@ -25,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nomedia.switcher.R
 import com.nomedia.switcher.ui.common.AlbumCover
 import com.nomedia.switcher.ui.common.StatusChip
 
@@ -43,10 +45,10 @@ fun AlbumListScreen(
         modifier = modifier,
         topBar = {
             SmallTopAppBar(
-                title = { Text(text = "Albums") },
+                title = { Text(text = stringResource(id = R.string.album_list_title)) },
                 actions = {
                     TextButton(onClick = onOpenSettings) {
-                        Text(text = "Settings")
+                        Text(text = stringResource(id = R.string.settings_title))
                     }
                 },
             )
@@ -87,7 +89,7 @@ private fun EmptyAlbumState(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "No switchable albums yet",
+            text = stringResource(id = R.string.album_list_empty_state),
             style = MaterialTheme.typography.bodyLarge,
         )
     }
@@ -142,7 +144,7 @@ private fun AlbumRow(
                 }
                 if (album.isHighlighted) {
                     StatusChip(
-                        text = "Opened from notification",
+                        text = stringResource(id = R.string.album_list_opened_from_notification),
                         state = album.state,
                     )
                 }

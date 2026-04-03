@@ -16,7 +16,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nomedia.switcher.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,10 +32,10 @@ fun SettingsScreen(
         modifier = modifier,
         topBar = {
             SmallTopAppBar(
-                title = { Text(text = "Settings") },
+                title = { Text(text = stringResource(id = R.string.settings_title)) },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text(text = "Back")
+                        Text(text = stringResource(id = R.string.settings_back))
                     }
                 },
             )
@@ -53,11 +55,11 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Pin hidden albums to top",
+                        text = stringResource(id = R.string.settings_pin_hidden_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        text = "Keep locally hidden albums easy to reach on startup.",
+                        text = stringResource(id = R.string.settings_pin_hidden_helper),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
