@@ -1,17 +1,22 @@
 package com.nomedia.switcher.ui.albums
 
+import android.content.res.Configuration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
-import com.nomedia.switcher.R
 import com.nomedia.switcher.ui.theme.NoMediaTheme
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 class AlbumListScreenTest {
     @get:Rule
@@ -52,55 +57,59 @@ class AlbumListScreenTest {
     @Test
     fun highlighted_album_shows_notification_badge() {
         composeTestRule.setContent {
-            NoMediaTheme {
-                AlbumListScreen(
-                    state = AlbumListUiState(
-                        albums = listOf(
-                            AlbumRowState(
-                                id = AlbumId("Pictures/Secret"),
-                                displayName = "Secret",
-                                directorySummary = "Pictures/Secret",
-                                state = AlbumState.Hidden,
-                                isChecked = true,
-                                isToggleEnabled = true,
-                                nextAction = ToggleAction.Show,
-                                statusText = "Hidden",
+            WithZhCnLocale {
+                NoMediaTheme {
+                    AlbumListScreen(
+                        state = AlbumListUiState(
+                            albums = listOf(
+                                AlbumRowState(
+                                    id = AlbumId("Pictures/Secret"),
+                                    displayName = "Secret",
+                                    directorySummary = "Pictures/Secret",
+                                    state = AlbumState.Hidden,
+                                    isChecked = true,
+                                    isToggleEnabled = true,
+                                    nextAction = ToggleAction.Show,
+                                    statusText = "Hidden",
+                                ),
                             ),
                         ),
-                    ),
-                    onToggleClick = {},
-                    onOpenSettings = {},
-                    highlightedAlbumId = AlbumId("Pictures/Secret"),
-                )
+                        onToggleClick = {},
+                        onOpenSettings = {},
+                        highlightedAlbumId = AlbumId("Pictures/Secret"),
+                    )
+                }
             }
         }
 
         composeTestRule
-            .onNodeWithText(context.getString(R.string.album_list_opened_from_notification))
+            .onNodeWithText("从通知中打开")
             .assertIsDisplayed()
     }
 
     @Test
     fun album_list_uses_resource_text_for_static_labels() {
         composeTestRule.setContent {
-            NoMediaTheme {
-                AlbumListScreen(
-                    state = AlbumListUiState(),
-                    onToggleClick = {},
-                    onOpenSettings = {},
-                    highlightedAlbumId = null,
-                )
+            WithZhCnLocale {
+                NoMediaTheme {
+                    AlbumListScreen(
+                        state = AlbumListUiState(),
+                        onToggleClick = {},
+                        onOpenSettings = {},
+                        highlightedAlbumId = null,
+                    )
+                }
             }
         }
 
         composeTestRule
-            .onNodeWithText(context.getString(R.string.album_list_title))
+            .onNodeWithText("图集")
             .assertIsDisplayed()
         composeTestRule
-            .onNodeWithText(context.getString(R.string.settings_title))
+            .onNodeWithText("设置")
             .assertIsDisplayed()
         composeTestRule
-            .onNodeWithText(context.getString(R.string.album_list_empty_state))
+            .onNodeWithText("暂无可切换的图集")
             .assertIsDisplayed()
     }
 
@@ -198,5 +207,19 @@ class AlbumListScreenTest {
         composeTestRule
             .onNodeWithTag("album-cover-image-Movies/Trips")
             .assertIsDisplayed()
+    }
+
+    @Composable
+    private fun WithZhCnLocale(content: @Composable () -> Unit) {
+        val zhConfiguration = Configuration(context.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag("zh-CN"))
+        }
+        val zhContext = context.createConfigurationContext(zhConfiguration)
+        CompositionLocalProvider(
+            LocalContext provides zhContext,
+            LocalConfiguration provides zhConfiguration,
+        ) {
+            content()
+        }
     }
 }
