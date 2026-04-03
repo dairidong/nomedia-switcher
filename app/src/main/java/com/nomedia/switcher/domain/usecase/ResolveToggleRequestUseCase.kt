@@ -24,7 +24,7 @@ sealed interface ToggleRequestResolution {
         val directoryKey: String,
         val albumName: String,
         val action: ToggleAction,
-        val reason: String,
+        val reason: ToggleFailureReason,
     ) : ToggleRequestResolution
 }
 
@@ -49,7 +49,7 @@ class ResolveToggleRequestUseCase(
                 directoryKey = directoryKey,
                 albumName = albumName,
                 action = action,
-                reason = "This directory cannot be granted on Android",
+                reason = ToggleFailureReason.RestrictedRoot,
             )
             null -> ToggleRequestResolution.RequestGrant(
                 directoryKey = directoryKey,

@@ -27,6 +27,7 @@ import com.nomedia.switcher.domain.usecase.ObserveAlbumsUseCase
 import com.nomedia.switcher.domain.usecase.ResolveToggleRequestUseCase
 import com.nomedia.switcher.domain.usecase.ToggleRequestResolution
 import com.nomedia.switcher.domain.model.AlbumState
+import com.nomedia.switcher.domain.usecase.ToggleFailureReason
 import com.nomedia.switcher.ui.access.DirectoryGrantLauncher
 import com.nomedia.switcher.ui.albums.AlbumListScreen
 import com.nomedia.switcher.ui.albums.AlbumListViewModel
@@ -120,7 +121,7 @@ fun AppRoot(
                 recordToggleFailure(
                     application = application,
                     album = request.toAlbumRowState(),
-                    reason = "Directory access was not granted",
+                    reason = ToggleFailureReason.GrantDenied,
                 )
             }
             return@rememberLauncherForActivityResult
@@ -132,7 +133,7 @@ fun AppRoot(
                 recordToggleFailure(
                     application = application,
                     album = request.toAlbumRowState(),
-                    reason = "Select the exact album folder",
+                    reason = ToggleFailureReason.WrongDirectorySelected,
                 )
             }
             return@rememberLauncherForActivityResult
@@ -151,7 +152,7 @@ fun AppRoot(
                 recordToggleFailure(
                     application = application,
                     album = request.toAlbumRowState(),
-                    reason = "Android refused to persist folder access",
+                    reason = ToggleFailureReason.PersistPermissionDenied,
                 )
             }
             return@rememberLauncherForActivityResult
@@ -218,7 +219,7 @@ fun AppRoot(
 private suspend fun recordToggleFailure(
     application: NoMediaApplication,
     album: AlbumRowState,
-    reason: String,
+    reason: ToggleFailureReason,
 ) {
     val action = album.nextAction ?: return
     application.appContainer.albumStateWriter.updateAlbum(
@@ -226,7 +227,7 @@ private suspend fun recordToggleFailure(
         displayName = album.displayName,
         state = AlbumState.Failed,
         lastAction = action,
-        lastFailure = reason,
+        lastFailure = reason.persistedKey,
         treeUri = null,
     )
 }

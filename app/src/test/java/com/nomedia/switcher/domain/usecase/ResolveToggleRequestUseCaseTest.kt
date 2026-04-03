@@ -79,4 +79,25 @@ class ResolveToggleRequestUseCaseTest {
             result,
         )
     }
+
+    @Test
+    fun restricted_root_returns_blocked_reason_key() = runTest {
+        val useCase = ResolveToggleRequestUseCase(repository)
+
+        val result = useCase(
+            directoryKey = "Download",
+            albumName = "Download",
+            action = ToggleAction.Hide,
+        )
+
+        assertEquals(
+            ToggleRequestResolution.Blocked(
+                directoryKey = "Download",
+                albumName = "Download",
+                action = ToggleAction.Hide,
+                reason = ToggleFailureReason.RestrictedRoot,
+            ),
+            result,
+        )
+    }
 }

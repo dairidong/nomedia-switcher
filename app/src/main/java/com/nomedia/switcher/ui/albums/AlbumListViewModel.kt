@@ -8,6 +8,7 @@ import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.usecase.ToggleFailureReason
 import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
 import kotlinx.coroutines.Dispatchers
@@ -225,7 +226,7 @@ private fun AlbumEntry.toRowState(
             isChecked = lastAction == ToggleAction.Show,
             isToggleEnabled = true,
             nextAction = lastAction ?: ToggleAction.Hide,
-            statusMessage = lastFailure?.let(UiMessage::Raw) ?: UiMessage.LastActionFailed,
+            statusMessage = lastFailure?.toFailureUiMessage() ?: UiMessage.LastActionFailed,
         )
         AlbumState.HiddenMissingFromScan -> AlbumRowState(
             id = id,
@@ -239,6 +240,17 @@ private fun AlbumEntry.toRowState(
             nextAction = ToggleAction.Show,
             statusMessage = UiMessage.AlbumHidden,
         )
+    }
+}
+
+private fun String.toFailureUiMessage(): UiMessage {
+    return when (ToggleFailureReason.fromPersistedKey(this)) {
+        ToggleFailureReason.RestrictedRoot -> UiMessage.DirectoryCannotBeGranted
+        ToggleFailureReason.GrantDenied -> UiMessage.DirectoryAccessNotGranted
+        ToggleFailureReason.WrongDirectorySelected -> UiMessage.WrongFolderSelected
+        ToggleFailureReason.PersistPermissionDenied -> UiMessage.PersistAccessDenied
+        ToggleFailureReason.Interrupted -> UiMessage.PreviousTaskInterrupted
+        null -> UiMessage.Raw(this)
     }
 }
 

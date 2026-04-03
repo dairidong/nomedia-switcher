@@ -22,4 +22,9 @@
     <string name="album_status_last_action_failed">上次操作失败</string>
     <string name="album_status_hide_in_progress">正在从媒体库隐藏</string>
     <string name="album_status_show_in_progress">正在恢复到媒体库</string>
+    <string name="album_failure_restricted_root">此目录在 Android 上无法授权</string>
+    <string name="album_failure_grant_denied">未授予目录访问权限</string>
+    <string name="album_failure_wrong_directory_selected">请选择准确的图集文件夹</string>
+    <string name="album_failure_persist_permission_denied">Android 拒绝持久保存文件夹访问权限</string>
+    <string name="album_failure_interrupted">上一次任务已中断，请重试。</string>
 </resources>

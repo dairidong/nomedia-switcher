@@ -91,7 +91,7 @@ class RecoverInterruptedAlbumTogglesUseCaseTest {
                     displayName = "Cyberpunk 2077",
                     state = AlbumState.Failed,
                     lastAction = ToggleAction.Hide,
-                    lastFailure = RecoverInterruptedAlbumTogglesUseCase.INTERRUPTED_REASON,
+                    lastFailure = ToggleFailureReason.Interrupted.persistedKey,
                     treeUri = "content://tree/cyberpunk",
                 ),
             ),

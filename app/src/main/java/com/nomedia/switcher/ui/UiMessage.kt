@@ -9,6 +9,11 @@ sealed interface UiMessage {
     data object LastActionFailed : UiMessage
     data object HideInProgress : UiMessage
     data object ShowInProgress : UiMessage
+    data object DirectoryCannotBeGranted : UiMessage
+    data object DirectoryAccessNotGranted : UiMessage
+    data object WrongFolderSelected : UiMessage
+    data object PersistAccessDenied : UiMessage
+    data object PreviousTaskInterrupted : UiMessage
     data class Raw(val value: String) : UiMessage
 }
 
@@ -18,5 +23,10 @@ fun UiMessage.resolve(): String = when (this) {
     UiMessage.LastActionFailed -> stringResource(id = R.string.album_status_last_action_failed)
     UiMessage.HideInProgress -> stringResource(id = R.string.album_status_hide_in_progress)
     UiMessage.ShowInProgress -> stringResource(id = R.string.album_status_show_in_progress)
+    UiMessage.DirectoryCannotBeGranted -> stringResource(id = R.string.album_failure_restricted_root)
+    UiMessage.DirectoryAccessNotGranted -> stringResource(id = R.string.album_failure_grant_denied)
+    UiMessage.WrongFolderSelected -> stringResource(id = R.string.album_failure_wrong_directory_selected)
+    UiMessage.PersistAccessDenied -> stringResource(id = R.string.album_failure_persist_permission_denied)
+    UiMessage.PreviousTaskInterrupted -> stringResource(id = R.string.album_failure_interrupted)
     is UiMessage.Raw -> value
 }

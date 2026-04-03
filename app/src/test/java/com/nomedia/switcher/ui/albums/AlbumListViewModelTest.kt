@@ -6,6 +6,7 @@ import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.usecase.ToggleFailureReason
 import com.nomedia.switcher.ui.UiMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -227,6 +228,35 @@ class AlbumListViewModelTest {
         advanceUntilIdle()
 
         assertEquals(UiMessage.LastActionFailed, viewModel.uiState.value.albums.single().statusMessage)
+    }
+
+    @Test
+    fun failed_album_with_known_failure_key_uses_localized_message_key() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Travel",
+                    state = AlbumState.Failed,
+                    lastAction = ToggleAction.Hide,
+                    lastFailure = ToggleFailureReason.RestrictedRoot.persistedKey,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            UiMessage.DirectoryCannotBeGranted,
+            viewModel.uiState.value.albums.single().statusMessage,
+        )
     }
 
     @Test

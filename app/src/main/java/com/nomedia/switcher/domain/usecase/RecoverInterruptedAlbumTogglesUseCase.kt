@@ -35,13 +35,16 @@ class RecoverInterruptedAlbumTogglesUseCase(
             displayName = record.displayName,
             state = recoveredState,
             lastAction = action,
-            lastFailure = if (recoveredState == AlbumState.Failed) INTERRUPTED_REASON else null,
+            lastFailure = if (recoveredState == AlbumState.Failed) {
+                ToggleFailureReason.Interrupted.persistedKey
+            } else {
+                null
+            },
             treeUri = treeUri,
         )
     }
 
     companion object {
-        const val INTERRUPTED_REASON = "Previous task was interrupted. Try again."
         private const val NOMEDIA_FILE = ".nomedia"
     }
 }

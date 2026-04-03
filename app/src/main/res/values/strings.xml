@@ -23,4 +23,9 @@
     <string name="album_status_last_action_failed">Last action failed</string>
     <string name="album_status_hide_in_progress">Hiding from media library</string>
     <string name="album_status_show_in_progress">Restoring to media library</string>
+    <string name="album_failure_restricted_root">This directory cannot be granted on Android</string>
+    <string name="album_failure_grant_denied">Directory access was not granted</string>
+    <string name="album_failure_wrong_directory_selected">Select the exact album folder</string>
+    <string name="album_failure_persist_permission_denied">Android refused to persist folder access</string>
+    <string name="album_failure_interrupted">Previous task was interrupted. Try again.</string>
 </resources>
