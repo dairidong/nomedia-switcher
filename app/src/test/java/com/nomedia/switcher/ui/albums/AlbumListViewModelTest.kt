@@ -205,6 +205,31 @@ class AlbumListViewModelTest {
     }
 
     @Test
+    fun failed_album_without_failure_shows_fallback_message() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Cyberpunk 2077",
+                    displayName = "Cyberpunk 2077",
+                    state = AlbumState.Failed,
+                    lastAction = ToggleAction.Hide,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(UiMessage.LastActionFailed, viewModel.uiState.value.albums.single().statusMessage)
+    }
+
+    @Test
     fun settings_toggle_updates_sorting_preference() = runTest {
         val albums = MutableStateFlow(emptyList<AlbumEntry>())
         val settings = MutableStateFlow(UserSettings())
