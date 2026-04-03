@@ -236,7 +236,7 @@ private fun AlbumEntry.toRowState(
             isChecked = true,
             isToggleEnabled = true,
             nextAction = ToggleAction.Show,
-            statusText = "Hidden, not currently in media library",
+            statusText = "Hidden",
         )
     }
 }

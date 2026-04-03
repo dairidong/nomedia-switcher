@@ -30,7 +30,7 @@ class AlbumListScreenTest {
                                 isChecked = true,
                                 isToggleEnabled = true,
                                 nextAction = ToggleAction.Show,
-                                statusText = "Hidden, not currently in media library",
+                                statusText = "Hidden",
                             ),
                         ),
                     ),
@@ -42,7 +42,7 @@ class AlbumListScreenTest {
         }
 
         composeTestRule
-            .onNodeWithText("Hidden, not currently in media library")
+            .onNodeWithText("Hidden")
             .assertIsDisplayed()
     }
 
@@ -155,7 +155,7 @@ class AlbumListScreenTest {
                                 isChecked = true,
                                 isToggleEnabled = true,
                                 nextAction = ToggleAction.Show,
-                                statusText = "Hidden, not currently in media library",
+                                statusText = "Hidden",
                             ),
                         ),
                     ),
