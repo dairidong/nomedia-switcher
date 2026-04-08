@@ -13,6 +13,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.theme.NoMediaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +39,7 @@ class AlbumListScreenTest {
                                 isChecked = true,
                                 isToggleEnabled = true,
                                 nextAction = ToggleAction.Show,
-                                statusText = "Hidden",
+                                statusMessage = UiMessage.AlbumHidden,
                             ),
                         ),
                     ),
@@ -70,7 +71,7 @@ class AlbumListScreenTest {
                                     isChecked = true,
                                     isToggleEnabled = true,
                                     nextAction = ToggleAction.Show,
-                                    statusText = "Hidden",
+                                    statusMessage = UiMessage.AlbumHidden,
                                 ),
                             ),
                         ),
@@ -128,7 +129,7 @@ class AlbumListScreenTest {
                                 isChecked = true,
                                 isToggleEnabled = false,
                                 nextAction = null,
-                                statusText = "Hiding from media library",
+                                statusMessage = UiMessage.HideInProgress,
                                 showsInlineProgress = true,
                             ),
                         ),
@@ -193,7 +194,7 @@ class AlbumListScreenTest {
                                 isChecked = true,
                                 isToggleEnabled = true,
                                 nextAction = ToggleAction.Show,
-                                statusText = "Hidden",
+                                statusMessage = UiMessage.AlbumHidden,
                             ),
                         ),
                     ),

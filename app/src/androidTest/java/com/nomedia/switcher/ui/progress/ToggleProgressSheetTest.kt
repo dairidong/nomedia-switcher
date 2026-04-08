@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.theme.NoMediaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -31,7 +32,7 @@ class ToggleProgressSheetTest {
                         albumId = AlbumId("Pictures/Edited"),
                         albumName = "Edited",
                         action = ToggleAction.Hide,
-                        message = "Hiding from media library",
+                        message = UiMessage.HideInProgress,
                     ),
                     onHide = {},
                 )
@@ -53,7 +54,7 @@ class ToggleProgressSheetTest {
                             albumId = AlbumId("Pictures/Edited"),
                             albumName = "Edited",
                             action = ToggleAction.Hide,
-                            message = "Hiding from media library",
+                            message = UiMessage.HideInProgress,
                         ),
                         onHide = {},
                     )
