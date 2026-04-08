@@ -15,6 +15,7 @@ import androidx.work.ForegroundInfo
 import com.nomedia.switcher.MainActivity
 import com.nomedia.switcher.R
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleResult
 
 class ToggleNotificationFactory(
@@ -93,8 +94,8 @@ class ToggleNotificationFactory(
         }
         val message = when (result) {
             ToggleResult.Success -> context.getString(R.string.toggle_success_message)
-            is ToggleResult.PermanentFailure -> result.reason
-            is ToggleResult.RetryableFailure -> result.reason
+            is ToggleResult.PermanentFailure -> result.reason.toLocalizedFailureMessage(context)
+            is ToggleResult.RetryableFailure -> result.reason.toLocalizedFailureMessage(context)
         }
 
         return NotificationCompat.Builder(context, RESULT_CHANNEL_ID)
@@ -135,5 +136,19 @@ class ToggleNotificationFactory(
         private const val PROGRESS_CHANNEL_ID = "toggle_progress"
         private const val RESULT_CHANNEL_ID = "toggle_results"
         private const val PROGRESS_NOTIFICATION_ID = 1001
+    }
+}
+
+private fun String.toLocalizedFailureMessage(context: Context): String {
+    return when (ToggleFailureReason.fromPersistedKey(this)) {
+        ToggleFailureReason.RestrictedRoot -> context.getString(R.string.album_failure_restricted_root)
+        ToggleFailureReason.GrantDenied -> context.getString(R.string.album_failure_grant_denied)
+        ToggleFailureReason.WrongDirectorySelected -> context.getString(R.string.album_failure_wrong_directory_selected)
+        ToggleFailureReason.PersistPermissionDenied -> context.getString(R.string.album_failure_persist_permission_denied)
+        ToggleFailureReason.Interrupted -> context.getString(R.string.album_failure_interrupted)
+        ToggleFailureReason.MissingDirectoryGrant -> context.getString(R.string.album_failure_missing_directory_grant)
+        ToggleFailureReason.UnableToCreateNomedia -> context.getString(R.string.album_failure_unable_to_create_nomedia)
+        ToggleFailureReason.UnableToRemoveNomedia -> context.getString(R.string.album_failure_unable_to_remove_nomedia)
+        null -> this
     }
 }

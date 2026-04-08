@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleResult
 import com.nomedia.switcher.worker.NomediaToggleExecutor
 import java.io.FileNotFoundException
@@ -29,7 +30,7 @@ class NomediaDocumentGateway(
         return if (created && directoryAccess.exists(treeUri, NOMEDIA_FILE)) {
             ToggleResult.Success
         } else {
-            ToggleResult.PermanentFailure("Unable to create .nomedia for $directoryKey")
+            ToggleResult.PermanentFailure(ToggleFailureReason.UnableToCreateNomedia.persistedKey)
         }
     }
 
@@ -40,7 +41,7 @@ class NomediaDocumentGateway(
         return if (directoryAccess.deleteFile(treeUri, NOMEDIA_FILE)) {
             ToggleResult.Success
         } else {
-            ToggleResult.PermanentFailure("Unable to remove .nomedia for $directoryKey")
+            ToggleResult.PermanentFailure(ToggleFailureReason.UnableToRemoveNomedia.persistedKey)
         }
     }
 

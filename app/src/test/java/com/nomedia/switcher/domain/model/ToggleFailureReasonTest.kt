@@ -14,6 +14,9 @@ class ToggleFailureReasonTest {
         assertEquals("toggle_failure/wrong_directory_selected", ToggleFailureReason.WrongDirectorySelected.persistedKey)
         assertEquals("toggle_failure/persist_permission_denied", ToggleFailureReason.PersistPermissionDenied.persistedKey)
         assertEquals("toggle_failure/interrupted", ToggleFailureReason.Interrupted.persistedKey)
+        assertEquals("toggle_failure/missing_directory_grant", ToggleFailureReason.MissingDirectoryGrant.persistedKey)
+        assertEquals("toggle_failure/unable_to_create_nomedia", ToggleFailureReason.UnableToCreateNomedia.persistedKey)
+        assertEquals("toggle_failure/unable_to_remove_nomedia", ToggleFailureReason.UnableToRemoveNomedia.persistedKey)
 
         assertEquals(keys.size, keys.toSet().size)
         assertTrue(keys.all { it.startsWith("toggle_failure/") })

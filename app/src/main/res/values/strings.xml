@@ -28,4 +28,7 @@
     <string name="album_failure_wrong_directory_selected">Select the exact album folder</string>
     <string name="album_failure_persist_permission_denied">Android refused to persist folder access</string>
     <string name="album_failure_interrupted">Previous task was interrupted. Try again.</string>
+    <string name="album_failure_missing_directory_grant">Folder access is missing. Grant it again.</string>
+    <string name="album_failure_unable_to_create_nomedia">Couldn\'t create the .nomedia file</string>
+    <string name="album_failure_unable_to_remove_nomedia">Couldn\'t remove the .nomedia file</string>
 </resources>

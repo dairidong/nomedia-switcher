@@ -11,6 +11,7 @@ import com.nomedia.switcher.data.toggle.MediaRefreshCoordinator
 import com.nomedia.switcher.data.toggle.NomediaDocumentGateway
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleResult
 import com.nomedia.switcher.domain.usecase.AlbumStateWriter
 import kotlinx.coroutines.test.runTest
@@ -44,7 +45,7 @@ class ToggleAlbumWorkerTest {
                     directoryKey = "DCIM/Camera",
                     albumName = "Camera",
                     action = ToggleAction.Hide,
-                    result = ToggleResult.PermanentFailure("Missing directory grant"),
+                    result = ToggleResult.PermanentFailure(ToggleFailureReason.MissingDirectoryGrant.persistedKey),
                 ),
             ),
             notificationFactory.completions,

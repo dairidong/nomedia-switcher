@@ -192,7 +192,7 @@ class AlbumListViewModelTest {
                 displayName = "Cyberpunk 2077",
                 state = AlbumState.Failed,
                 lastAction = ToggleAction.Hide,
-                lastFailure = "Missing directory grant",
+                lastFailure = ToggleFailureReason.MissingDirectoryGrant.persistedKey,
             ),
         )
         advanceUntilIdle()
@@ -200,7 +200,7 @@ class AlbumListViewModelTest {
         assertEquals(null, viewModel.uiState.value.progressSheet)
         assertEquals(AlbumState.Failed, viewModel.uiState.value.albums.single().state)
         assertEquals(
-            UiMessage.Raw("Missing directory grant"),
+            UiMessage.DirectoryGrantMissing,
             viewModel.uiState.value.albums.single().statusMessage,
         )
     }
@@ -255,6 +255,64 @@ class AlbumListViewModelTest {
 
         assertEquals(
             UiMessage.DirectoryCannotBeGranted,
+            viewModel.uiState.value.albums.single().statusMessage,
+        )
+    }
+
+    @Test
+    fun failed_album_with_nomedia_create_failure_key_uses_localized_message_key() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Travel",
+                    state = AlbumState.Failed,
+                    lastAction = ToggleAction.Hide,
+                    lastFailure = ToggleFailureReason.UnableToCreateNomedia.persistedKey,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            UiMessage.UnableToCreateNomedia,
+            viewModel.uiState.value.albums.single().statusMessage,
+        )
+    }
+
+    @Test
+    fun failed_album_with_nomedia_remove_failure_key_uses_localized_message_key() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Travel",
+                    displayName = "Travel",
+                    state = AlbumState.Failed,
+                    lastAction = ToggleAction.Show,
+                    lastFailure = ToggleFailureReason.UnableToRemoveNomedia.persistedKey,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            UiMessage.UnableToRemoveNomedia,
             viewModel.uiState.value.albums.single().statusMessage,
         )
     }

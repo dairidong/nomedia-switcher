@@ -27,4 +27,7 @@
     <string name="album_failure_wrong_directory_selected">请选择准确的图集文件夹</string>
     <string name="album_failure_persist_permission_denied">Android 拒绝持久保存文件夹访问权限</string>
     <string name="album_failure_interrupted">上一次任务已中断，请重试。</string>
+    <string name="album_failure_missing_directory_grant">缺少文件夹访问权限，请重新授权。</string>
+    <string name="album_failure_unable_to_create_nomedia">无法创建 .nomedia 文件</string>
+    <string name="album_failure_unable_to_remove_nomedia">无法删除 .nomedia 文件</string>
 </resources>

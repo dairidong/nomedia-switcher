@@ -250,6 +250,9 @@ private fun String.toFailureUiMessage(): UiMessage {
         ToggleFailureReason.WrongDirectorySelected -> UiMessage.WrongFolderSelected
         ToggleFailureReason.PersistPermissionDenied -> UiMessage.PersistAccessDenied
         ToggleFailureReason.Interrupted -> UiMessage.PreviousTaskInterrupted
+        ToggleFailureReason.MissingDirectoryGrant -> UiMessage.DirectoryGrantMissing
+        ToggleFailureReason.UnableToCreateNomedia -> UiMessage.UnableToCreateNomedia
+        ToggleFailureReason.UnableToRemoveNomedia -> UiMessage.UnableToRemoveNomedia
         null -> UiMessage.Raw(this)
     }
 }

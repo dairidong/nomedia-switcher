@@ -14,6 +14,9 @@ sealed interface UiMessage {
     data object WrongFolderSelected : UiMessage
     data object PersistAccessDenied : UiMessage
     data object PreviousTaskInterrupted : UiMessage
+    data object DirectoryGrantMissing : UiMessage
+    data object UnableToCreateNomedia : UiMessage
+    data object UnableToRemoveNomedia : UiMessage
     data class Raw(val value: String) : UiMessage
 }
 
@@ -28,5 +31,8 @@ fun UiMessage.resolve(): String = when (this) {
     UiMessage.WrongFolderSelected -> stringResource(id = R.string.album_failure_wrong_directory_selected)
     UiMessage.PersistAccessDenied -> stringResource(id = R.string.album_failure_persist_permission_denied)
     UiMessage.PreviousTaskInterrupted -> stringResource(id = R.string.album_failure_interrupted)
+    UiMessage.DirectoryGrantMissing -> stringResource(id = R.string.album_failure_missing_directory_grant)
+    UiMessage.UnableToCreateNomedia -> stringResource(id = R.string.album_failure_unable_to_create_nomedia)
+    UiMessage.UnableToRemoveNomedia -> stringResource(id = R.string.album_failure_unable_to_remove_nomedia)
     is UiMessage.Raw -> value
 }

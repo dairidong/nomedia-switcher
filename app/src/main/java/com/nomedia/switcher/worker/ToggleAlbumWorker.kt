@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.nomedia.switcher.data.toggle.MediaRefreshCoordinator
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleResult
 import com.nomedia.switcher.domain.usecase.AlbumStateWriter
 
@@ -58,7 +59,7 @@ open class ToggleAlbumWorker(
                 directoryKey = directoryKey,
                 albumName = albumName,
                 action = action,
-                reason = "Missing directory grant",
+                reason = ToggleFailureReason.MissingDirectoryGrant.persistedKey,
                 notifyCompletion = true,
                 result = Result.failure(),
             )

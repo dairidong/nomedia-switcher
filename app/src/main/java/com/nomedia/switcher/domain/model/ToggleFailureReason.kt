@@ -17,6 +17,9 @@ enum class ToggleFailureReason(
     WrongDirectorySelected("toggle_failure/wrong_directory_selected"),
     PersistPermissionDenied("toggle_failure/persist_permission_denied"),
     Interrupted("toggle_failure/interrupted"),
+    MissingDirectoryGrant("toggle_failure/missing_directory_grant"),
+    UnableToCreateNomedia("toggle_failure/unable_to_create_nomedia"),
+    UnableToRemoveNomedia("toggle_failure/unable_to_remove_nomedia"),
     ;
 
     companion object {
