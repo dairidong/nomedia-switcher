@@ -4,6 +4,7 @@ import android.net.Uri
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
 import com.nomedia.switcher.data.access.GrantError
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.ui.access.DirectoryGrantLauncher
 
 sealed interface ToggleRequestResolution {

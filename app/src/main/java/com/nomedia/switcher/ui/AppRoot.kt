@@ -27,7 +27,7 @@ import com.nomedia.switcher.domain.usecase.ObserveAlbumsUseCase
 import com.nomedia.switcher.domain.usecase.ResolveToggleRequestUseCase
 import com.nomedia.switcher.domain.usecase.ToggleRequestResolution
 import com.nomedia.switcher.domain.model.AlbumState
-import com.nomedia.switcher.domain.usecase.ToggleFailureReason
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.ui.access.DirectoryGrantLauncher
 import com.nomedia.switcher.ui.albums.AlbumListScreen
 import com.nomedia.switcher.ui.albums.AlbumListViewModel

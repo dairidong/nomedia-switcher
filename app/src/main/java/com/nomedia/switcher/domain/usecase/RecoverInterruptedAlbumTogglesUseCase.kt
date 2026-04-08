@@ -4,6 +4,7 @@ import com.nomedia.switcher.data.local.album.AlbumRecordEntity
 import com.nomedia.switcher.data.toggle.NomediaDirectoryAccess
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 
 class RecoverInterruptedAlbumTogglesUseCase(
     private val findProcessingAlbums: suspend () -> List<AlbumRecordEntity>,

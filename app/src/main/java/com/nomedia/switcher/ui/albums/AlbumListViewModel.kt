@@ -7,8 +7,8 @@ import com.nomedia.switcher.data.cover.ResolvedAlbumCover
 import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleAction
-import com.nomedia.switcher.domain.usecase.ToggleFailureReason
 import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
 import kotlinx.coroutines.Dispatchers

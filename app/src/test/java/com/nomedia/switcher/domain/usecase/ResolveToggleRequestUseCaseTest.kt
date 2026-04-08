@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
 import com.nomedia.switcher.data.local.AppDatabase
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleAction
 import kotlinx.coroutines.test.runTest
 import org.junit.After
