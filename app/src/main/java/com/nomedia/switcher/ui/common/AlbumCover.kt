@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -22,8 +23,6 @@ import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
-
-private const val ALBUM_COVER_REQUEST_SIZE_PX = 128
 
 @Composable
 fun AlbumCover(
@@ -34,10 +33,12 @@ fun AlbumCover(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val shape = RoundedCornerShape(20.dp)
     val coverModifier = modifier
         .size(64.dp)
         .clip(shape)
+    val requestSizePx = with(density) { 64.dp.roundToPx() }
 
     if (coverUri.isNullOrBlank()) {
         AlbumCoverPlaceholder(
@@ -48,11 +49,11 @@ fun AlbumCover(
         return
     }
 
-    val model = remember(context, coverUri, coverMediaKind, ALBUM_COVER_REQUEST_SIZE_PX) {
+    val model = remember(context, coverUri, coverMediaKind, requestSizePx) {
         val requestSpec = buildAlbumCoverRequestSpec(
             coverUri = coverUri,
             coverMediaKind = coverMediaKind,
-            targetSizePx = ALBUM_COVER_REQUEST_SIZE_PX,
+            targetSizePx = requestSizePx,
         )
         ImageRequest.Builder(context)
             .data(requestSpec.data)

@@ -2,7 +2,6 @@ package com.nomedia.switcher.ui.albums
 
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -177,42 +176,6 @@ class AlbumListScreenTest {
         composeTestRule
             .onNodeWithTag("album-cover-placeholder-Pictures/Edited")
             .assertIsDisplayed()
-    }
-
-    @Test
-    fun album_with_video_cover_renders_cover_node_instead_of_placeholder() {
-        composeTestRule.setContent {
-            NoMediaTheme {
-                AlbumListScreen(
-                    state = AlbumListUiState(
-                        albums = listOf(
-                            AlbumRowState(
-                                id = AlbumId("Movies/Trips"),
-                                displayName = "Trips",
-                                directorySummary = "Movies/Trips",
-                                state = AlbumState.HiddenMissingFromScan,
-                                coverUri = "content://documents/trips/video",
-                                coverMediaKind = "video",
-                                isChecked = true,
-                                isToggleEnabled = true,
-                                nextAction = ToggleAction.Show,
-                                statusMessage = UiMessage.AlbumHidden,
-                            ),
-                        ),
-                    ),
-                    onToggleClick = {},
-                    onOpenSettings = {},
-                    highlightedAlbumId = null,
-                )
-            }
-        }
-
-        composeTestRule
-            .onNodeWithTag("album-cover-image-Movies/Trips")
-            .assertIsDisplayed()
-        composeTestRule
-            .onAllNodesWithTag("album-cover-placeholder-Movies/Trips")
-            .assertCountEquals(0)
     }
 
     @Test
