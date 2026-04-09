@@ -242,6 +242,12 @@ class AlbumListScreenTest {
             }
         }
 
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule
+                .onAllNodesWithTag("album-cover-placeholder-Movies/Broken")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
         composeTestRule
             .onNodeWithTag("album-cover-placeholder-Movies/Broken")
             .assertIsDisplayed()

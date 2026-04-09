@@ -15,7 +15,7 @@ class AlbumCoverRequestSpecTest {
         assertEquals("content://media/external/video/media/5", spec.data)
         assertEquals(true, spec.useVideoFrame)
         assertEquals(128, spec.targetSizePx)
-        assertEquals(1_000L, spec.videoFrameMillis)
+        assertEquals(100L, spec.videoFrameMillis)
     }
 
     @Test

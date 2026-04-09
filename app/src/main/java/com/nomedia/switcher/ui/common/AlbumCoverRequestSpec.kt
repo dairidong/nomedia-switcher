@@ -1,6 +1,6 @@
 package com.nomedia.switcher.ui.common
 
-private const val VIDEO_COVER_FRAME_MILLIS = 1_000L
+private const val VIDEO_COVER_FRAME_MILLIS = 100L
 
 data class AlbumCoverRequestSpec(
     val data: String,

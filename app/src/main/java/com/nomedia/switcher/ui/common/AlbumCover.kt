@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,14 +48,13 @@ fun AlbumCover(
         return
     }
 
-    val requestSpec = buildAlbumCoverRequestSpec(
-        coverUri = coverUri,
-        coverMediaKind = coverMediaKind,
-        targetSizePx = ALBUM_COVER_REQUEST_SIZE_PX,
-    )
-
-    val painter = rememberAsyncImagePainter(
-        model = ImageRequest.Builder(context)
+    val model = remember(context, coverUri, coverMediaKind, ALBUM_COVER_REQUEST_SIZE_PX) {
+        val requestSpec = buildAlbumCoverRequestSpec(
+            coverUri = coverUri,
+            coverMediaKind = coverMediaKind,
+            targetSizePx = ALBUM_COVER_REQUEST_SIZE_PX,
+        )
+        ImageRequest.Builder(context)
             .data(requestSpec.data)
             .size(requestSpec.targetSizePx, requestSpec.targetSizePx)
             .apply {
@@ -62,8 +62,10 @@ fun AlbumCover(
                     videoFrameMillis(requestSpec.videoFrameMillis)
                 }
             }
-            .build(),
-    )
+            .build()
+    }
+
+    val painter = rememberAsyncImagePainter(model = model)
 
     if (painter.state is AsyncImagePainter.State.Error) {
         AlbumCoverPlaceholder(
