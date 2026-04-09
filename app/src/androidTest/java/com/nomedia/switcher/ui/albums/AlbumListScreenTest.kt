@@ -1,11 +1,13 @@
 package com.nomedia.switcher.ui.albums
 
 import android.content.res.Configuration
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -207,6 +209,41 @@ class AlbumListScreenTest {
 
         composeTestRule
             .onNodeWithTag("album-cover-image-Movies/Trips")
+            .assertIsDisplayed()
+        composeTestRule
+            .onAllNodesWithTag("album-cover-placeholder-Movies/Trips")
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun album_with_broken_video_cover_falls_back_to_placeholder() {
+        composeTestRule.setContent {
+            NoMediaTheme {
+                AlbumListScreen(
+                    state = AlbumListUiState(
+                        albums = listOf(
+                            AlbumRowState(
+                                id = AlbumId("Movies/Broken"),
+                                displayName = "Broken",
+                                directorySummary = "Movies/Broken",
+                                state = AlbumState.Shown,
+                                coverUri = "content://media/external/video/media/does_not_exist",
+                                coverMediaKind = "video",
+                                isChecked = false,
+                                isToggleEnabled = true,
+                                nextAction = ToggleAction.Hide,
+                            ),
+                        ),
+                    ),
+                    onToggleClick = {},
+                    onOpenSettings = {},
+                    highlightedAlbumId = null,
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag("album-cover-placeholder-Movies/Broken")
             .assertIsDisplayed()
     }
 
