@@ -10,12 +10,16 @@ import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleAction
 import com.nomedia.switcher.ui.UiMessage
+import com.nomedia.switcher.ui.toUiMessage
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -43,19 +47,34 @@ class AlbumListViewModel(
     private val pendingActions = MutableStateFlow<Map<AlbumId, ToggleAction>>(emptyMap())
     private val progressSheetState = MutableStateFlow<ToggleProgressSheetState?>(null)
     private val fallbackCovers = MutableStateFlow<Map<AlbumId, ResolvedAlbumCover>>(emptyMap())
+    private val fallbackCoverRefs = MutableStateFlow<Map<AlbumId, FallbackCoverRef>>(emptyMap())
+    private val transientMessageFlow = MutableSharedFlow<UiMessage>(extraBufferCapacity = 1)
+    val transientMessages: SharedFlow<UiMessage> = transientMessageFlow.asSharedFlow()
 
     init {
         viewModelScope.launch {
             albumEntries.collect { entries ->
-                val completedIds = pendingActions.value.keys.filter { id ->
+                val completedEntries = pendingActions.value.keys.mapNotNull { id ->
                     val entry = entries.firstOrNull { it.id == id }
-                    entry == null || entry.state != AlbumState.Processing
+                    if (entry == null || entry.state != AlbumState.Processing) {
+                        id to entry
+                    } else {
+                        null
+                    }
                 }
+                val completedIds = completedEntries.map { it.first }
                 if (completedIds.isEmpty()) {
                     return@collect
                 }
                 pendingActions.update { current ->
                     current - completedIds.toSet()
+                }
+                completedEntries.forEach { (_, entry) ->
+                    if (entry?.state == AlbumState.Failed) {
+                        transientMessageFlow.tryEmit(
+                            entry.lastFailure?.toFailureUiMessage() ?: UiMessage.LastActionFailed,
+                        )
+                    }
                 }
                 if (progressSheetState.value?.albumId in completedIds) {
                     progressSheetState.value = null
@@ -64,21 +83,26 @@ class AlbumListViewModel(
         }
         viewModelScope.launch {
             albumEntries.collect { entries ->
+                val cachedCovers = fallbackCovers.value
+                val cachedRefs = fallbackCoverRefs.value
                 val resolvedFallbacks = withContext(Dispatchers.IO) {
                     entries.mapNotNull { entry ->
-                        val treeUri = entry.treeUri ?: return@mapNotNull null
-                        if (entry.coverUri != null) {
-                            return@mapNotNull null
+                        val fallbackRef = entry.fallbackCoverRef() ?: return@mapNotNull null
+                        val cachedCover = cachedCovers[entry.id]
+                        if (cachedRefs[entry.id] == fallbackRef && cachedCover != null) {
+                            return@mapNotNull entry.id to cachedCover
                         }
-                        val resolved = resolveFallbackCover(
-                            treeUri,
-                            entry.coverRelativeFilePath,
-                            entry.coverMediaKind,
-                        ) ?: return@mapNotNull null
-                        entry.id to resolved
+                        resolveFallbackCover(
+                            fallbackRef.treeUri,
+                            fallbackRef.relativeFilePath,
+                            fallbackRef.mediaKind,
+                        )?.let { entry.id to it }
                     }.toMap()
                 }
                 fallbackCovers.value = resolvedFallbacks
+                fallbackCoverRefs.value = entries.mapNotNull { entry ->
+                    entry.fallbackCoverRef()?.let { entry.id to it }
+                }.toMap()
             }
         }
     }
@@ -126,6 +150,10 @@ class AlbumListViewModel(
         progressSheetState.value = null
     }
 
+    fun onForegroundFailure(message: UiMessage) {
+        transientMessageFlow.tryEmit(message)
+    }
+
     fun onPinHiddenChanged(enabled: Boolean) {
         viewModelScope.launch {
             setPinHiddenAlbums(enabled)
@@ -155,6 +183,12 @@ class AlbumListViewModel(
         }
     }
 }
+
+private data class FallbackCoverRef(
+    val treeUri: String,
+    val relativeFilePath: String,
+    val mediaKind: String,
+)
 
 private fun AlbumEntry.toRowState(
     pendingAction: ToggleAction?,
@@ -243,16 +277,30 @@ private fun AlbumEntry.toRowState(
     }
 }
 
+private fun AlbumEntry.fallbackCoverRef(): FallbackCoverRef? {
+    if (coverUri != null) {
+        return null
+    }
+    val treeUri = treeUri ?: return null
+    val relativeFilePath = coverRelativeFilePath?.takeIf { it.isNotBlank() } ?: return null
+    val mediaKind = coverMediaKind?.takeIf { it.isNotBlank() } ?: return null
+    return FallbackCoverRef(
+        treeUri = treeUri,
+        relativeFilePath = relativeFilePath,
+        mediaKind = mediaKind,
+    )
+}
+
 private fun String.toFailureUiMessage(): UiMessage {
     return when (ToggleFailureReason.fromPersistedKey(this)) {
-        ToggleFailureReason.RestrictedRoot -> UiMessage.DirectoryCannotBeGranted
-        ToggleFailureReason.GrantDenied -> UiMessage.DirectoryAccessNotGranted
-        ToggleFailureReason.WrongDirectorySelected -> UiMessage.WrongFolderSelected
-        ToggleFailureReason.PersistPermissionDenied -> UiMessage.PersistAccessDenied
-        ToggleFailureReason.Interrupted -> UiMessage.PreviousTaskInterrupted
-        ToggleFailureReason.MissingDirectoryGrant -> UiMessage.DirectoryGrantMissing
-        ToggleFailureReason.UnableToCreateNomedia -> UiMessage.UnableToCreateNomedia
-        ToggleFailureReason.UnableToRemoveNomedia -> UiMessage.UnableToRemoveNomedia
+        ToggleFailureReason.RestrictedRoot -> ToggleFailureReason.RestrictedRoot.toUiMessage()
+        ToggleFailureReason.GrantDenied -> ToggleFailureReason.GrantDenied.toUiMessage()
+        ToggleFailureReason.WrongDirectorySelected -> ToggleFailureReason.WrongDirectorySelected.toUiMessage()
+        ToggleFailureReason.PersistPermissionDenied -> ToggleFailureReason.PersistPermissionDenied.toUiMessage()
+        ToggleFailureReason.Interrupted -> ToggleFailureReason.Interrupted.toUiMessage()
+        ToggleFailureReason.MissingDirectoryGrant -> ToggleFailureReason.MissingDirectoryGrant.toUiMessage()
+        ToggleFailureReason.UnableToCreateNomedia -> ToggleFailureReason.UnableToCreateNomedia.toUiMessage()
+        ToggleFailureReason.UnableToRemoveNomedia -> ToggleFailureReason.UnableToRemoveNomedia.toUiMessage()
         null -> UiMessage.Raw(this)
     }
 }

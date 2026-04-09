@@ -1,8 +1,10 @@
 package com.nomedia.switcher.ui
 
+import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.nomedia.switcher.R
+import com.nomedia.switcher.domain.model.ToggleFailureReason
 
 sealed interface UiMessage {
     data object AlbumHidden : UiMessage
@@ -20,19 +22,32 @@ sealed interface UiMessage {
     data class Raw(val value: String) : UiMessage
 }
 
-@Composable
-fun UiMessage.resolve(): String = when (this) {
-    UiMessage.AlbumHidden -> stringResource(id = R.string.album_status_hidden)
-    UiMessage.LastActionFailed -> stringResource(id = R.string.album_status_last_action_failed)
-    UiMessage.HideInProgress -> stringResource(id = R.string.album_status_hide_in_progress)
-    UiMessage.ShowInProgress -> stringResource(id = R.string.album_status_show_in_progress)
-    UiMessage.DirectoryCannotBeGranted -> stringResource(id = R.string.album_failure_restricted_root)
-    UiMessage.DirectoryAccessNotGranted -> stringResource(id = R.string.album_failure_grant_denied)
-    UiMessage.WrongFolderSelected -> stringResource(id = R.string.album_failure_wrong_directory_selected)
-    UiMessage.PersistAccessDenied -> stringResource(id = R.string.album_failure_persist_permission_denied)
-    UiMessage.PreviousTaskInterrupted -> stringResource(id = R.string.album_failure_interrupted)
-    UiMessage.DirectoryGrantMissing -> stringResource(id = R.string.album_failure_missing_directory_grant)
-    UiMessage.UnableToCreateNomedia -> stringResource(id = R.string.album_failure_unable_to_create_nomedia)
-    UiMessage.UnableToRemoveNomedia -> stringResource(id = R.string.album_failure_unable_to_remove_nomedia)
+fun UiMessage.resolve(context: Context): String = when (this) {
+    UiMessage.AlbumHidden -> context.getString(R.string.album_status_hidden)
+    UiMessage.LastActionFailed -> context.getString(R.string.album_status_last_action_failed)
+    UiMessage.HideInProgress -> context.getString(R.string.album_status_hide_in_progress)
+    UiMessage.ShowInProgress -> context.getString(R.string.album_status_show_in_progress)
+    UiMessage.DirectoryCannotBeGranted -> context.getString(R.string.album_failure_restricted_root)
+    UiMessage.DirectoryAccessNotGranted -> context.getString(R.string.album_failure_grant_denied)
+    UiMessage.WrongFolderSelected -> context.getString(R.string.album_failure_wrong_directory_selected)
+    UiMessage.PersistAccessDenied -> context.getString(R.string.album_failure_persist_permission_denied)
+    UiMessage.PreviousTaskInterrupted -> context.getString(R.string.album_failure_interrupted)
+    UiMessage.DirectoryGrantMissing -> context.getString(R.string.album_failure_missing_directory_grant)
+    UiMessage.UnableToCreateNomedia -> context.getString(R.string.album_failure_unable_to_create_nomedia)
+    UiMessage.UnableToRemoveNomedia -> context.getString(R.string.album_failure_unable_to_remove_nomedia)
     is UiMessage.Raw -> value
+}
+
+@Composable
+fun UiMessage.resolve(): String = resolve(LocalContext.current)
+
+internal fun ToggleFailureReason.toUiMessage(): UiMessage = when (this) {
+    ToggleFailureReason.RestrictedRoot -> UiMessage.DirectoryCannotBeGranted
+    ToggleFailureReason.GrantDenied -> UiMessage.DirectoryAccessNotGranted
+    ToggleFailureReason.WrongDirectorySelected -> UiMessage.WrongFolderSelected
+    ToggleFailureReason.PersistPermissionDenied -> UiMessage.PersistAccessDenied
+    ToggleFailureReason.Interrupted -> UiMessage.PreviousTaskInterrupted
+    ToggleFailureReason.MissingDirectoryGrant -> UiMessage.DirectoryGrantMissing
+    ToggleFailureReason.UnableToCreateNomedia -> UiMessage.UnableToCreateNomedia
+    ToggleFailureReason.UnableToRemoveNomedia -> UiMessage.UnableToRemoveNomedia
 }

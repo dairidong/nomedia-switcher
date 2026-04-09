@@ -17,10 +17,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,8 +45,8 @@ fun AlbumListScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            SmallTopAppBar(
-                title = { Text(text = stringResource(id = R.string.album_list_title)) },
+            TopAppBar(
+                title = {},
                 actions = {
                     TextButton(onClick = onOpenSettings) {
                         Text(text = stringResource(id = R.string.settings_title))
@@ -72,9 +72,11 @@ fun AlbumListScreen(
                 items(
                     items = state.albums,
                     key = { it.id.directoryKey },
+                    contentType = { "album" },
                 ) { album ->
                     AlbumRow(
-                        album = album.copy(isHighlighted = album.id == highlightedAlbumId),
+                        album = album,
+                        isHighlighted = album.id == highlightedAlbumId,
                         onToggleClick = onToggleClick,
                     )
                 }
@@ -99,11 +101,12 @@ private fun EmptyAlbumState(modifier: Modifier = Modifier) {
 @Composable
 private fun AlbumRow(
     album: AlbumRowState,
+    isHighlighted: Boolean,
     onToggleClick: (AlbumRowState) -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        border = if (album.isHighlighted) {
+        border = if (isHighlighted) {
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         } else {
             null
@@ -143,7 +146,7 @@ private fun AlbumRow(
                         state = album.state,
                     )
                 }
-                if (album.isHighlighted) {
+                if (isHighlighted) {
                     StatusChip(
                         text = stringResource(id = R.string.album_list_opened_from_notification),
                         state = album.state,

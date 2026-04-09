@@ -11,8 +11,10 @@ import com.nomedia.switcher.ui.UiMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -163,6 +165,53 @@ class AlbumListViewModelTest {
     }
 
     @Test
+    fun fallback_cover_resolution_is_reused_when_cover_reference_does_not_change() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Movies/Trips",
+                    displayName = "Trips",
+                    state = AlbumState.HiddenMissingFromScan,
+                    coverUri = null,
+                    coverRelativeFilePath = "Clips/VID_0007.mp4",
+                    coverMediaKind = "video",
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        var resolveCalls = 0
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+            resolveFallbackCover = { _, _, _ ->
+                resolveCalls += 1
+                ResolvedAlbumCover(
+                    uri = "content://documents/trips/video",
+                    mediaKind = "video",
+                )
+            },
+        )
+
+        advanceUntilIdle()
+        albums.value = listOf(
+            album(
+                directoryKey = "Movies/Trips",
+                displayName = "Trips",
+                state = AlbumState.Hidden,
+                coverUri = null,
+                coverRelativeFilePath = "Clips/VID_0007.mp4",
+                coverMediaKind = "video",
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, resolveCalls)
+        assertEquals("content://documents/trips/video", viewModel.uiState.value.albums.single().coverUri)
+    }
+
+    @Test
     fun completed_toggle_clears_pending_processing_state() = runTest {
         val albums = MutableStateFlow(
             listOf(
@@ -203,6 +252,73 @@ class AlbumListViewModelTest {
             UiMessage.DirectoryGrantMissing,
             viewModel.uiState.value.albums.single().statusMessage,
         )
+    }
+
+    @Test
+    fun completed_failed_toggle_emits_transient_failure_message_once() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Cyberpunk 2077",
+                    displayName = "Cyberpunk 2077",
+                    state = AlbumState.Shown,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+        val messages = mutableListOf<UiMessage>()
+        val collectJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.transientMessages.collect(messages::add)
+        }
+        advanceUntilIdle()
+
+        advanceUntilIdle()
+        val row = viewModel.uiState.value.albums.single()
+
+        viewModel.onToggleClick(row)
+        advanceUntilIdle()
+        albums.value = listOf(
+            album(
+                directoryKey = "Pictures/Cyberpunk 2077",
+                displayName = "Cyberpunk 2077",
+                state = AlbumState.Failed,
+                lastAction = ToggleAction.Hide,
+                lastFailure = ToggleFailureReason.MissingDirectoryGrant.persistedKey,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf(UiMessage.DirectoryGrantMissing), messages)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun foreground_failure_emits_transient_message_immediately() = runTest {
+        val albums = MutableStateFlow(emptyList<AlbumEntry>())
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+        val messages = mutableListOf<UiMessage>()
+        val collectJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.transientMessages.collect(messages::add)
+        }
+        advanceUntilIdle()
+
+        viewModel.onForegroundFailure(UiMessage.DirectoryAccessNotGranted)
+        advanceUntilIdle()
+
+        assertEquals(listOf(UiMessage.DirectoryAccessNotGranted), messages)
+        collectJob.cancel()
     }
 
     @Test

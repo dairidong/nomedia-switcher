@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +37,7 @@ import com.nomedia.switcher.ui.progress.ToggleProgressSheet
 import com.nomedia.switcher.ui.settings.SettingsScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -123,6 +125,7 @@ fun AppRoot(
                     album = request.toAlbumRowState(),
                     reason = ToggleFailureReason.GrantDenied,
                 )
+                viewModel.onForegroundFailure(ToggleFailureReason.GrantDenied.toUiMessage())
             }
             return@rememberLauncherForActivityResult
         }
@@ -135,6 +138,7 @@ fun AppRoot(
                     album = request.toAlbumRowState(),
                     reason = ToggleFailureReason.WrongDirectorySelected,
                 )
+                viewModel.onForegroundFailure(ToggleFailureReason.WrongDirectorySelected.toUiMessage())
             }
             return@rememberLauncherForActivityResult
         }
@@ -154,6 +158,7 @@ fun AppRoot(
                     album = request.toAlbumRowState(),
                     reason = ToggleFailureReason.PersistPermissionDenied,
                 )
+                viewModel.onForegroundFailure(ToggleFailureReason.PersistPermissionDenied.toUiMessage())
             }
             return@rememberLauncherForActivityResult
         }
@@ -167,6 +172,12 @@ fun AppRoot(
         }
     }
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(viewModel, context) {
+        viewModel.transientMessages.collectLatest { message ->
+            Toast.makeText(context, message.resolve(context), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (showSettings) {
         SettingsScreen(
@@ -195,7 +206,9 @@ fun AppRoot(
                             application = application,
                             album = album,
                             reason = resolution.reason,
-                        )
+                        ).also {
+                            viewModel.onForegroundFailure(resolution.reason.toUiMessage())
+                        }
                     }
                 }
             },

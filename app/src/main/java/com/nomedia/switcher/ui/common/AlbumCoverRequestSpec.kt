@@ -2,12 +2,44 @@ package com.nomedia.switcher.ui.common
 
 private const val VIDEO_COVER_FRAME_MILLIS = 100L
 
+sealed interface AlbumCoverSourceSpec {
+    data class CoilRequest(
+        val request: AlbumCoverRequestSpec,
+    ) : AlbumCoverSourceSpec
+
+    data class PlatformThumbnail(
+        val uri: String,
+        val targetSizePx: Int,
+    ) : AlbumCoverSourceSpec
+}
+
 data class AlbumCoverRequestSpec(
     val data: String,
     val useVideoFrame: Boolean,
     val targetSizePx: Int,
     val videoFrameMillis: Long,
 )
+
+fun buildAlbumCoverSourceSpec(
+    coverUri: String,
+    coverMediaKind: String?,
+    targetSizePx: Int,
+): AlbumCoverSourceSpec {
+    return if (coverMediaKind == "video") {
+        AlbumCoverSourceSpec.PlatformThumbnail(
+            uri = coverUri,
+            targetSizePx = targetSizePx,
+        )
+    } else {
+        AlbumCoverSourceSpec.CoilRequest(
+            request = buildAlbumCoverRequestSpec(
+                coverUri = coverUri,
+                coverMediaKind = coverMediaKind,
+                targetSizePx = targetSizePx,
+            ),
+        )
+    }
+}
 
 fun buildAlbumCoverRequestSpec(
     coverUri: String,

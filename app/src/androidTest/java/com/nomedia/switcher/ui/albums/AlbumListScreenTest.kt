@@ -2,14 +2,16 @@ package com.nomedia.switcher.ui.albums
 
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
@@ -90,7 +92,7 @@ class AlbumListScreenTest {
     }
 
     @Test
-    fun album_list_uses_resource_text_for_static_labels() {
+    fun album_list_hides_title_text_and_keeps_settings_entry() {
         composeTestRule.setContent {
             WithZhCnLocale {
                 NoMediaTheme {
@@ -105,8 +107,8 @@ class AlbumListScreenTest {
         }
 
         composeTestRule
-            .onNodeWithText("图集")
-            .assertIsDisplayed()
+            .onAllNodesWithText("图集")
+            .assertCountEquals(0)
         composeTestRule
             .onNodeWithText("设置")
             .assertIsDisplayed()
