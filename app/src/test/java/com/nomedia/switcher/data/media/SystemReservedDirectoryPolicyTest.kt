@@ -33,4 +33,10 @@ class SystemReservedDirectoryPolicyTest {
         assertFalse(policy.isReserved("Pictures/Screenshots/Edited"))
         assertFalse(policy.isReserved("DCIM/Camera/Burst"))
     }
+
+    @Test
+    fun isReserved_returns_false_for_download_children() {
+        assertFalse(policy.isReserved("Download/Telegram"))
+        assertFalse(policy.isReserved("Download/MyApp/Exports"))
+    }
 }

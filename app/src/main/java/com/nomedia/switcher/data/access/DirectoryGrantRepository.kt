@@ -27,8 +27,12 @@ class DirectoryGrantRepository(
     }
 
     fun validateGrantRequest(directoryKey: String): GrantError? {
-        val restrictedRoots = setOf("Download")
-        return if (directoryKey.substringBefore('/') in restrictedRoots) {
+        val segments = directoryKey
+            .split('/')
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+
+        return if (segments.size == 1 && segments[0].equals("Download", ignoreCase = true)) {
             GrantError.RestrictedRoot
         } else {
             null

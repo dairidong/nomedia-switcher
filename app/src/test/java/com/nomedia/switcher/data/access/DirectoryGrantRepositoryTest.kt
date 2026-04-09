@@ -74,4 +74,9 @@ class DirectoryGrantRepositoryTest {
             repository.validateGrantRequest("Download"),
         )
     }
+
+    @Test
+    fun validateGrantRequest_allows_download_child_directory() = runTest {
+        assertNull(repository.validateGrantRequest("Download/Telegram"))
+    }
 }

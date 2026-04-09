@@ -278,6 +278,34 @@ class MediaStoreAlbumLoaderTest {
         assertEquals("clip_5.mp4", album.coverRelativeFilePath)
     }
 
+    @Test
+    fun load_keeps_download_child_albums_switchable() = runTest {
+        val loader = MediaStoreAlbumLoader(
+            scanner = MediaStoreAlbumScanner(),
+            queryRows = { _, _ ->
+                listOf(
+                    MediaStoreAlbumRow(
+                        mediaId = 6L,
+                        bucketId = "6",
+                        bucketName = "Telegram",
+                        relativePath = "Download/Telegram/",
+                        dataPath = null,
+                        volumeName = "external_primary",
+                        displayName = "video_6.mp4",
+                        albumRelativeFilePath = "video_6.mp4",
+                        mediaKind = "video",
+                    ),
+                )
+            },
+        )
+
+        val album = loader.load(
+            ApplicationProvider.getApplicationContext<android.content.Context>().contentResolver,
+        ).single { it.directoryKey == "Download/Telegram" }
+
+        assertEquals("video", album.coverMediaKind)
+    }
+
     private fun coverUri(
         mediaId: Long,
         volumeName: String = "external_primary",
