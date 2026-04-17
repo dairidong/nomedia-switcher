@@ -30,7 +30,7 @@ private fun queryMediaRows(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         ),
-        "${MediaStore.MediaColumns.DATE_ADDED} DESC",
+        "${MediaStore.MediaColumns.DATE_MODIFIED} DESC, ${MediaStore.Files.FileColumns._ID} DESC",
     )?.use { cursor ->
         val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val bucketIdIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_ID)
@@ -39,6 +39,7 @@ private fun queryMediaRows(
         val volumeNameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.VOLUME_NAME)
         val displayNameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
         val mediaTypeIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val dateModifiedIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
 
         while (cursor.moveToNext()) {
             val displayName = cursor.getString(displayNameIndex)
@@ -55,6 +56,9 @@ private fun queryMediaRows(
                     MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO -> MediaStoreAlbumScanner.MEDIA_KIND_VIDEO
                     else -> MediaStoreAlbumScanner.MEDIA_KIND_IMAGE
                 },
+                dateModifiedEpochMs = cursor.getLong(dateModifiedIndex)
+                    .takeIf { it > 0L }
+                    ?.times(1_000L),
             )
         }
     }

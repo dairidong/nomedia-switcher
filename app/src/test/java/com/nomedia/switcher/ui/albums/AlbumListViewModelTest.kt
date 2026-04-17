@@ -1,5 +1,6 @@
 package com.nomedia.switcher.ui.albums
 
+import com.nomedia.switcher.data.local.settings.AlbumSortMode
 import com.nomedia.switcher.data.local.settings.UserSettings
 import com.nomedia.switcher.data.cover.ResolvedAlbumCover
 import com.nomedia.switcher.domain.model.AlbumEntry
@@ -21,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +50,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { directoryKey, albumName, action ->
+            enqueueToggle = { directoryKey, albumName, action, _, _ ->
                 toggleRequests += Triple(directoryKey, albumName, action)
             },
             setPinHiddenAlbums = {},
@@ -87,7 +89,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -116,7 +118,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -143,10 +145,10 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
-            resolveFallbackCover = { treeUri, relativeFilePath, mediaKind ->
-                if (treeUri == null || relativeFilePath == null || mediaKind == null) {
+            resolveFallbackCover = { _, _, relativeFilePath, mediaKind ->
+                if (relativeFilePath == null || mediaKind == null) {
                     null
                 } else {
                     ResolvedAlbumCover(
@@ -183,9 +185,9 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
-            resolveFallbackCover = { _, _, _ ->
+            resolveFallbackCover = { _, _, _, _ ->
                 resolveCalls += 1
                 ResolvedAlbumCover(
                     uri = "content://documents/trips/video",
@@ -212,6 +214,52 @@ class AlbumListViewModelTest {
     }
 
     @Test
+    fun unchanged_album_rows_reuse_previous_instances_when_other_rows_change() = runTest {
+        val albums = MutableStateFlow(
+            listOf(
+                album(
+                    directoryKey = "Pictures/Alpha",
+                    displayName = "Alpha",
+                    state = AlbumState.Shown,
+                ),
+                album(
+                    directoryKey = "Pictures/Beta",
+                    displayName = "Beta",
+                    state = AlbumState.Shown,
+                ),
+            ),
+        )
+        val settings = MutableStateFlow(UserSettings())
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _, _, _ -> },
+            setPinHiddenAlbums = {},
+        )
+
+        advanceUntilIdle()
+        val initialRows = viewModel.uiState.value.albums
+        val alphaRowBefore = initialRows.first { it.id == AlbumId("Pictures/Alpha") }
+
+        albums.value = listOf(
+            album(
+                directoryKey = "Pictures/Alpha",
+                displayName = "Alpha",
+                state = AlbumState.Shown,
+            ),
+            album(
+                directoryKey = "Pictures/Beta",
+                displayName = "Beta",
+                state = AlbumState.Hidden,
+            ),
+        )
+        advanceUntilIdle()
+
+        val alphaRowAfter = viewModel.uiState.value.albums.first { it.id == AlbumId("Pictures/Alpha") }
+        assertSame(alphaRowBefore, alphaRowAfter)
+    }
+
+    @Test
     fun completed_toggle_clears_pending_processing_state() = runTest {
         val albums = MutableStateFlow(
             listOf(
@@ -226,7 +274,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -247,11 +295,8 @@ class AlbumListViewModelTest {
         advanceUntilIdle()
 
         assertEquals(null, viewModel.uiState.value.progressSheet)
-        assertEquals(AlbumState.Failed, viewModel.uiState.value.albums.single().state)
-        assertEquals(
-            UiMessage.DirectoryGrantMissing,
-            viewModel.uiState.value.albums.single().statusMessage,
-        )
+        assertEquals(AlbumState.Shown, viewModel.uiState.value.albums.single().state)
+        assertEquals(null, viewModel.uiState.value.albums.single().statusMessage)
     }
 
     @Test
@@ -269,7 +314,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
         val messages = mutableListOf<UiMessage>()
@@ -305,7 +350,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
         val messages = mutableListOf<UiMessage>()
@@ -337,7 +382,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -347,7 +392,7 @@ class AlbumListViewModelTest {
     }
 
     @Test
-    fun failed_album_with_known_failure_key_uses_localized_message_key() = runTest {
+    fun failed_album_with_non_persistent_failure_key_reverts_to_regular_row_state() = runTest {
         val albums = MutableStateFlow(
             listOf(
                 album(
@@ -363,16 +408,14 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
         advanceUntilIdle()
 
-        assertEquals(
-            UiMessage.DirectoryCannotBeGranted,
-            viewModel.uiState.value.albums.single().statusMessage,
-        )
+        assertEquals(AlbumState.Shown, viewModel.uiState.value.albums.single().state)
+        assertEquals(null, viewModel.uiState.value.albums.single().statusMessage)
     }
 
     @Test
@@ -392,7 +435,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -421,7 +464,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = {},
         )
 
@@ -441,7 +484,7 @@ class AlbumListViewModelTest {
         val viewModel = AlbumListViewModel(
             albums = albums,
             settings = settings,
-            enqueueToggle = { _, _, _ -> },
+            enqueueToggle = { _, _, _, _, _ -> },
             setPinHiddenAlbums = { enabled ->
                 updates += enabled
                 settings.value = settings.value.copy(pinHiddenAlbumsToTop = enabled)
@@ -453,6 +496,29 @@ class AlbumListViewModelTest {
 
         assertEquals(listOf(false), updates)
         assertEquals(false, viewModel.uiState.value.pinHiddenAlbumsToTop)
+    }
+
+    @Test
+    fun sort_mode_updates_preference_and_ui_state() = runTest {
+        val albums = MutableStateFlow(emptyList<AlbumEntry>())
+        val settings = MutableStateFlow(UserSettings())
+        val updates = mutableListOf<AlbumSortMode>()
+        val viewModel = AlbumListViewModel(
+            albums = albums,
+            settings = settings,
+            enqueueToggle = { _, _, _, _, _ -> },
+            setPinHiddenAlbums = {},
+            setAlbumSortMode = { mode ->
+                updates += mode
+                settings.value = settings.value.copy(albumSortMode = mode)
+            },
+        )
+
+        viewModel.onAlbumSortModeChanged(AlbumSortMode.ByLatestMedia)
+        advanceUntilIdle()
+
+        assertEquals(listOf(AlbumSortMode.ByLatestMedia), updates)
+        assertEquals(AlbumSortMode.ByLatestMedia, viewModel.uiState.value.albumSortMode)
     }
 
     private fun album(

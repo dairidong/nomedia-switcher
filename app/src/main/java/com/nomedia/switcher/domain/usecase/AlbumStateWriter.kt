@@ -12,4 +12,11 @@ interface AlbumStateWriter {
         lastFailure: String?,
         treeUri: String?,
     )
+
+    suspend fun updateCachedCover(
+        directoryKey: String,
+        cachedCoverPath: String,
+        cachedCoverMediaKind: String,
+        cachedCoverUpdatedAtEpochMs: Long,
+    )
 }

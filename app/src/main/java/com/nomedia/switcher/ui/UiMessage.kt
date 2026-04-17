@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.nomedia.switcher.R
+import com.nomedia.switcher.data.cover.AlbumCoverWarningCode
 import com.nomedia.switcher.domain.model.ToggleFailureReason
 
 sealed interface UiMessage {
@@ -19,6 +20,11 @@ sealed interface UiMessage {
     data object DirectoryGrantMissing : UiMessage
     data object UnableToCreateNomedia : UiMessage
     data object UnableToRemoveNomedia : UiMessage
+    data object VideoThumbnailFailed : UiMessage
+    data object VideoFrameFailed : UiMessage
+    data object VideoThumbnailAndFrameFailed : UiMessage
+    data object CoverCacheWriteFailed : UiMessage
+    data object CoverCacheFailed : UiMessage
     data class Raw(val value: String) : UiMessage
 }
 
@@ -35,6 +41,11 @@ fun UiMessage.resolve(context: Context): String = when (this) {
     UiMessage.DirectoryGrantMissing -> context.getString(R.string.album_failure_missing_directory_grant)
     UiMessage.UnableToCreateNomedia -> context.getString(R.string.album_failure_unable_to_create_nomedia)
     UiMessage.UnableToRemoveNomedia -> context.getString(R.string.album_failure_unable_to_remove_nomedia)
+    UiMessage.VideoThumbnailFailed -> context.getString(R.string.album_warning_video_thumbnail_failed)
+    UiMessage.VideoFrameFailed -> context.getString(R.string.album_warning_video_frame_failed)
+    UiMessage.VideoThumbnailAndFrameFailed -> context.getString(R.string.album_warning_video_thumbnail_and_frame_failed)
+    UiMessage.CoverCacheWriteFailed -> context.getString(R.string.album_warning_cover_cache_write_failed)
+    UiMessage.CoverCacheFailed -> context.getString(R.string.album_warning_cover_cache_failed)
     is UiMessage.Raw -> value
 }
 
@@ -50,4 +61,12 @@ internal fun ToggleFailureReason.toUiMessage(): UiMessage = when (this) {
     ToggleFailureReason.MissingDirectoryGrant -> UiMessage.DirectoryGrantMissing
     ToggleFailureReason.UnableToCreateNomedia -> UiMessage.UnableToCreateNomedia
     ToggleFailureReason.UnableToRemoveNomedia -> UiMessage.UnableToRemoveNomedia
+}
+
+internal fun AlbumCoverWarningCode.toUiMessage(): UiMessage = when (this) {
+    AlbumCoverWarningCode.VideoThumbnailFailed -> UiMessage.VideoThumbnailFailed
+    AlbumCoverWarningCode.VideoFrameFailed -> UiMessage.VideoFrameFailed
+    AlbumCoverWarningCode.VideoThumbnailAndFrameFailed -> UiMessage.VideoThumbnailAndFrameFailed
+    AlbumCoverWarningCode.CacheWriteFailed -> UiMessage.CoverCacheWriteFailed
+    AlbumCoverWarningCode.Generic -> UiMessage.CoverCacheFailed
 }

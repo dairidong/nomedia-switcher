@@ -28,6 +28,7 @@ class MediaStoreAlbumScannerTest {
                     bucketName = "Camera",
                     directoryKey = "DCIM/Camera",
                     coverUri = coverUri(1L),
+                    latestMediaTimestampEpochMs = 1_000L,
                     coverRelativeFilePath = "IMG_0001.jpg",
                     coverDisplayName = "IMG_0001.jpg",
                     coverMediaKind = "image",
@@ -41,12 +42,25 @@ class MediaStoreAlbumScannerTest {
     fun fromRows_uses_newest_media_item_as_cover_source() {
         val albums = scanner.fromRows(
             listOf(
-                row(mediaId = 200L, bucketId = "1", bucketName = "Edited", relativePath = "Pictures/Edited/"),
-                row(mediaId = 100L, bucketId = "1", bucketName = "Edited", relativePath = "Pictures/Edited/"),
+                row(
+                    mediaId = 200L,
+                    bucketId = "1",
+                    bucketName = "Edited",
+                    relativePath = "Pictures/Edited/",
+                    dateModifiedEpochMs = 20_000L,
+                ),
+                row(
+                    mediaId = 100L,
+                    bucketId = "1",
+                    bucketName = "Edited",
+                    relativePath = "Pictures/Edited/",
+                    dateModifiedEpochMs = 10_000L,
+                ),
             )
         )
 
         assertEquals(coverUri(200L), albums.single().coverUri)
+        assertEquals(20_000L, albums.single().latestMediaTimestampEpochMs)
     }
 
     @Test
@@ -118,6 +132,7 @@ class MediaStoreAlbumScannerTest {
         displayName: String = "IMG_0001.jpg",
         albumRelativeFilePath: String = "IMG_0001.jpg",
         mediaKind: String = "image",
+        dateModifiedEpochMs: Long = 1_000L,
     ): MediaStoreAlbumRow {
         return MediaStoreAlbumRow(
             mediaId = mediaId,
@@ -129,6 +144,7 @@ class MediaStoreAlbumScannerTest {
             displayName = displayName,
             albumRelativeFilePath = albumRelativeFilePath,
             mediaKind = mediaKind,
+            dateModifiedEpochMs = dateModifiedEpochMs,
         )
     }
 
@@ -149,6 +165,7 @@ class MediaStoreAlbumScannerTest {
         directoryKey: String,
         volumeName: String = "external_primary",
         coverUri: String? = null,
+        latestMediaTimestampEpochMs: Long? = null,
         coverRelativeFilePath: String? = null,
         coverDisplayName: String? = null,
         coverMediaKind: String? = null,
@@ -159,6 +176,7 @@ class MediaStoreAlbumScannerTest {
             directoryKey = directoryKey,
             volumeName = volumeName,
             coverUri = coverUri,
+            latestMediaTimestampEpochMs = latestMediaTimestampEpochMs,
             coverRelativeFilePath = coverRelativeFilePath,
             coverDisplayName = coverDisplayName,
             coverMediaKind = coverMediaKind,

@@ -1,6 +1,7 @@
 package com.nomedia.switcher.domain.usecase
 
 import com.nomedia.switcher.data.local.album.AlbumRecordEntity
+import com.nomedia.switcher.data.local.settings.AlbumSortMode
 import com.nomedia.switcher.data.media.AlbumCandidate
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
@@ -187,10 +188,37 @@ class ObserveAlbumsUseCaseTest {
         assertEquals("image", merged.single().coverMediaKind)
     }
 
+    @Test
+    fun merge_uses_lastKnown_latest_media_time_for_hidden_album_missing_from_scan() = runTest {
+        val merged = useCase.merge(
+            records = listOf(
+                localAlbum(
+                    directoryKey = "Pictures/Older",
+                    displayName = "Older",
+                    state = AlbumState.HiddenMissingFromScan,
+                    latestMediaTimestampEpochMs = 10L,
+                ),
+                localAlbum(
+                    directoryKey = "Pictures/Newer",
+                    displayName = "Newer",
+                    state = AlbumState.HiddenMissingFromScan,
+                    latestMediaTimestampEpochMs = 100L,
+                ),
+            ),
+            scan = emptyList(),
+            pinHidden = true,
+            sortMode = AlbumSortMode.ByLatestMedia,
+            scanCompleted = true,
+        )
+
+        assertEquals(listOf("Newer", "Older"), merged.map { it.displayName })
+    }
+
     private fun localAlbum(
         directoryKey: String,
         displayName: String,
         state: AlbumState,
+        latestMediaTimestampEpochMs: Long? = null,
         coverRelativeFilePath: String? = null,
         coverMediaKind: String? = null,
     ): AlbumRecordEntity {
@@ -203,6 +231,7 @@ class ObserveAlbumsUseCaseTest {
             lastFailure = null,
             seenInLastScan = state != AlbumState.HiddenMissingFromScan,
             updatedAtEpochMs = 1L,
+            latestMediaTimestampEpochMs = latestMediaTimestampEpochMs,
             coverRelativeFilePath = coverRelativeFilePath,
             coverMediaKind = coverMediaKind,
         )

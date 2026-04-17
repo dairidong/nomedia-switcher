@@ -60,6 +60,58 @@ class RoomAlbumStateWriterTest {
         )
     }
 
+    @Test
+    fun updateCachedCover_preserves_existing_album_state_fields() = runTest {
+        val dao = FakeAlbumRecordDao(
+            existing = AlbumRecordEntity(
+                directoryKey = "Pictures/Travel",
+                displayName = "Travel",
+                state = AlbumState.HiddenMissingFromScan,
+                treeUri = "content://tree/travel",
+                lastAction = ToggleAction.Hide,
+                lastFailure = null,
+                seenInLastScan = false,
+                updatedAtEpochMs = 1L,
+                coverRelativeFilePath = "IMG_0042.jpg",
+                coverDisplayName = "IMG_0042.jpg",
+                coverMediaKind = "image",
+                coverUpdatedAtEpochMs = 2L,
+            ),
+        )
+        val writer = RoomAlbumStateWriter(
+            albumRecordDao = dao,
+            currentTimeProvider = { 9L },
+        )
+
+        writer.updateCachedCover(
+            directoryKey = "Pictures/Travel",
+            cachedCoverPath = "/data/user/0/com.nomedia.switcher/files/album-cover-cache/travel.webp",
+            cachedCoverMediaKind = "image",
+            cachedCoverUpdatedAtEpochMs = 8L,
+        )
+
+        assertEquals(
+            AlbumRecordEntity(
+                directoryKey = "Pictures/Travel",
+                displayName = "Travel",
+                state = AlbumState.HiddenMissingFromScan,
+                treeUri = "content://tree/travel",
+                lastAction = ToggleAction.Hide,
+                lastFailure = null,
+                seenInLastScan = false,
+                updatedAtEpochMs = 9L,
+                coverRelativeFilePath = "IMG_0042.jpg",
+                coverDisplayName = "IMG_0042.jpg",
+                coverMediaKind = "image",
+                coverUpdatedAtEpochMs = 2L,
+                cachedCoverPath = "/data/user/0/com.nomedia.switcher/files/album-cover-cache/travel.webp",
+                cachedCoverMediaKind = "image",
+                cachedCoverUpdatedAtEpochMs = 8L,
+            ),
+            dao.lastUpsert,
+        )
+    }
+
     private class FakeAlbumRecordDao(
         existing: AlbumRecordEntity?,
     ) : AlbumRecordDao {
@@ -70,6 +122,10 @@ class RoomAlbumStateWriterTest {
 
         override suspend fun findByDirectoryKey(directoryKey: String): AlbumRecordEntity? = records[directoryKey]
 
+        override suspend fun findByDirectoryKeys(directoryKeys: List<String>): List<AlbumRecordEntity> {
+            return directoryKeys.mapNotNull(records::get)
+        }
+
         override suspend fun findByState(state: AlbumState): List<AlbumRecordEntity> {
             return records.values.filter { it.state == state }
         }
@@ -77,6 +133,13 @@ class RoomAlbumStateWriterTest {
         override suspend fun upsert(record: AlbumRecordEntity) {
             records[record.directoryKey] = record
             lastUpsert = record
+        }
+
+        override suspend fun upsertAll(records: List<AlbumRecordEntity>) {
+            records.forEach { record ->
+                this.records[record.directoryKey] = record
+                lastUpsert = record
+            }
         }
     }
 }

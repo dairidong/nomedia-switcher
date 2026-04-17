@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nomedia.switcher.data.cover.ResolvedAlbumCover
+import com.nomedia.switcher.data.local.settings.AlbumSortMode
 import com.nomedia.switcher.domain.model.AlbumEntry
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleFailureReason
 import com.nomedia.switcher.domain.model.ToggleAction
+import com.nomedia.switcher.domain.model.shouldPersistAlbumFailureState
 import com.nomedia.switcher.ui.UiMessage
 import com.nomedia.switcher.ui.toUiMessage
 import com.nomedia.switcher.ui.progress.ToggleProgressSheetState
@@ -29,15 +31,17 @@ import kotlinx.coroutines.withContext
 data class AlbumListUiState(
     val albums: List<AlbumRowState> = emptyList(),
     val pinHiddenAlbumsToTop: Boolean = true,
+    val albumSortMode: AlbumSortMode = AlbumSortMode.ByName,
     val progressSheet: ToggleProgressSheetState? = null,
 )
 
 class AlbumListViewModel(
     albums: Flow<List<AlbumEntry>>,
     settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
-    private val enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
+    private val enqueueToggle: suspend (String, String, ToggleAction, String?, String?) -> Unit,
     private val setPinHiddenAlbums: suspend (Boolean) -> Unit,
-    private val resolveFallbackCover: suspend (String, String?, String?) -> ResolvedAlbumCover? = { _, _, _ -> null },
+    private val setAlbumSortMode: suspend (AlbumSortMode) -> Unit = {},
+    private val resolveFallbackCover: suspend (String, String, String?, String?) -> ResolvedAlbumCover? = { _, _, _, _ -> null },
 ) : ViewModel() {
     private val albumEntries = albums.stateIn(
         scope = viewModelScope,
@@ -49,6 +53,7 @@ class AlbumListViewModel(
     private val fallbackCovers = MutableStateFlow<Map<AlbumId, ResolvedAlbumCover>>(emptyMap())
     private val fallbackCoverRefs = MutableStateFlow<Map<AlbumId, FallbackCoverRef>>(emptyMap())
     private val transientMessageFlow = MutableSharedFlow<UiMessage>(extraBufferCapacity = 1)
+    private var rowStateCache: Map<AlbumId, AlbumRowState> = emptyMap()
     val transientMessages: SharedFlow<UiMessage> = transientMessageFlow.asSharedFlow()
 
     init {
@@ -93,6 +98,7 @@ class AlbumListViewModel(
                             return@mapNotNull entry.id to cachedCover
                         }
                         resolveFallbackCover(
+                            entry.id.directoryKey,
                             fallbackRef.treeUri,
                             fallbackRef.relativeFilePath,
                             fallbackRef.mediaKind,
@@ -114,14 +120,21 @@ class AlbumListViewModel(
         progressSheetState,
         fallbackCovers,
     ) { albumEntries, userSettings, pending, sheet, resolvedFallbacks ->
+        val reusedRows = linkedMapOf<AlbumId, AlbumRowState>()
+        val rows = albumEntries.map { entry ->
+            val nextRow = entry.toRowState(
+                pendingAction = pending[entry.id],
+                fallbackCover = resolvedFallbacks[entry.id],
+            )
+            val reusedRow = rowStateCache[entry.id]?.takeIf { it == nextRow } ?: nextRow
+            reusedRows[entry.id] = reusedRow
+            reusedRow
+        }
+        rowStateCache = reusedRows
         AlbumListUiState(
-            albums = albumEntries.map { entry ->
-                entry.toRowState(
-                    pendingAction = pending[entry.id],
-                    fallbackCover = resolvedFallbacks[entry.id],
-                )
-            },
+            albums = rows,
             pinHiddenAlbumsToTop = userSettings.pinHiddenAlbumsToTop,
+            albumSortMode = userSettings.albumSortMode,
             progressSheet = sheet,
         )
     }.stateIn(
@@ -142,7 +155,13 @@ class AlbumListViewModel(
             message = progressMessage(action),
         )
         viewModelScope.launch {
-            enqueueToggle(album.id.directoryKey, album.displayName, action)
+            enqueueToggle(
+                album.id.directoryKey,
+                album.displayName,
+                action,
+                album.coverUri,
+                album.coverMediaKind,
+            )
         }
     }
 
@@ -160,13 +179,20 @@ class AlbumListViewModel(
         }
     }
 
+    fun onAlbumSortModeChanged(mode: AlbumSortMode) {
+        viewModelScope.launch {
+            setAlbumSortMode(mode)
+        }
+    }
+
     companion object {
         fun factory(
             albums: Flow<List<AlbumEntry>>,
             settings: Flow<com.nomedia.switcher.data.local.settings.UserSettings>,
-            enqueueToggle: suspend (String, String, ToggleAction) -> Unit,
+            enqueueToggle: suspend (String, String, ToggleAction, String?, String?) -> Unit,
             setPinHiddenAlbums: suspend (Boolean) -> Unit,
-            resolveFallbackCover: suspend (String, String?, String?) -> ResolvedAlbumCover? = { _, _, _ -> null },
+            setAlbumSortMode: suspend (AlbumSortMode) -> Unit,
+            resolveFallbackCover: suspend (String, String, String?, String?) -> ResolvedAlbumCover? = { _, _, _, _ -> null },
         ): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -176,6 +202,7 @@ class AlbumListViewModel(
                         settings = settings,
                         enqueueToggle = enqueueToggle,
                         setPinHiddenAlbums = setPinHiddenAlbums,
+                        setAlbumSortMode = setAlbumSortMode,
                         resolveFallbackCover = resolveFallbackCover,
                     ) as T
                 }
@@ -250,17 +277,9 @@ private fun AlbumEntry.toRowState(
             statusMessage = progressMessage(lastAction ?: ToggleAction.Hide),
             showsInlineProgress = true,
         )
-        AlbumState.Failed -> AlbumRowState(
-            id = id,
-            displayName = displayName,
-            directorySummary = id.directoryKey,
-            state = state,
-            coverUri = resolvedCoverUri,
-            coverMediaKind = resolvedCoverMediaKind,
-            isChecked = lastAction == ToggleAction.Show,
-            isToggleEnabled = true,
-            nextAction = lastAction ?: ToggleAction.Hide,
-            statusMessage = lastFailure?.toFailureUiMessage() ?: UiMessage.LastActionFailed,
+        AlbumState.Failed -> toFailedRowState(
+            resolvedCoverUri = resolvedCoverUri,
+            resolvedCoverMediaKind = resolvedCoverMediaKind,
         )
         AlbumState.HiddenMissingFromScan -> AlbumRowState(
             id = id,
@@ -275,6 +294,54 @@ private fun AlbumEntry.toRowState(
             statusMessage = UiMessage.AlbumHidden,
         )
     }
+}
+
+private fun AlbumEntry.toFailedRowState(
+    resolvedCoverUri: String?,
+    resolvedCoverMediaKind: String?,
+): AlbumRowState {
+    val failureReason = lastFailure?.let(ToggleFailureReason::fromPersistedKey)
+    if (failureReason != null && !failureReason.shouldPersistAlbumFailureState()) {
+        return when (lastAction) {
+            ToggleAction.Show -> AlbumRowState(
+                id = id,
+                displayName = displayName,
+                directorySummary = id.directoryKey,
+                state = AlbumState.Hidden,
+                coverUri = resolvedCoverUri,
+                coverMediaKind = resolvedCoverMediaKind,
+                isChecked = true,
+                isToggleEnabled = true,
+                nextAction = ToggleAction.Show,
+                statusMessage = UiMessage.AlbumHidden,
+            )
+
+            ToggleAction.Hide, null -> AlbumRowState(
+                id = id,
+                displayName = displayName,
+                directorySummary = id.directoryKey,
+                state = AlbumState.Shown,
+                coverUri = resolvedCoverUri,
+                coverMediaKind = resolvedCoverMediaKind,
+                isChecked = false,
+                isToggleEnabled = true,
+                nextAction = ToggleAction.Hide,
+            )
+        }
+    }
+
+    return AlbumRowState(
+        id = id,
+        displayName = displayName,
+        directorySummary = id.directoryKey,
+        state = AlbumState.Failed,
+        coverUri = resolvedCoverUri,
+        coverMediaKind = resolvedCoverMediaKind,
+        isChecked = lastAction == ToggleAction.Show,
+        isToggleEnabled = true,
+        nextAction = lastAction ?: ToggleAction.Hide,
+        statusMessage = lastFailure?.toFailureUiMessage() ?: UiMessage.LastActionFailed,
+    )
 }
 
 private fun AlbumEntry.fallbackCoverRef(): FallbackCoverRef? {

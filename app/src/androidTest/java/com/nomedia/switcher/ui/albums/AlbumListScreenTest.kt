@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
@@ -92,7 +93,7 @@ class AlbumListScreenTest {
     }
 
     @Test
-    fun album_list_hides_title_text_and_keeps_settings_entry() {
+    fun album_list_shows_app_name_title_and_uses_settings_icon_button() {
         composeTestRule.setContent {
             WithZhCnLocale {
                 NoMediaTheme {
@@ -107,10 +108,13 @@ class AlbumListScreenTest {
         }
 
         composeTestRule
-            .onAllNodesWithText("图集")
+            .onNodeWithText("NoMedia Switcher")
+            .assertIsDisplayed()
+        composeTestRule
+            .onAllNodesWithText("设置")
             .assertCountEquals(0)
         composeTestRule
-            .onNodeWithText("设置")
+            .onNodeWithContentDescription("打开设置")
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithText("暂无可切换的图集")

@@ -12,4 +12,5 @@ data class AlbumEntry(
     val lastFailure: String? = null,
     val seenInLastScan: Boolean = true,
     val updatedAtEpochMs: Long = 0L,
+    val latestMediaTimestampEpochMs: Long? = null,
 )

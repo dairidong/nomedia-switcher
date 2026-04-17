@@ -11,6 +11,11 @@ sealed interface AlbumCoverSourceSpec {
         val uri: String,
         val targetSizePx: Int,
     ) : AlbumCoverSourceSpec
+
+    data class VideoFrameAssetFileDescriptor(
+        val uri: String,
+        val targetSizePx: Int,
+    ) : AlbumCoverSourceSpec
 }
 
 data class AlbumCoverRequestSpec(
@@ -25,8 +30,13 @@ fun buildAlbumCoverSourceSpec(
     coverMediaKind: String?,
     targetSizePx: Int,
 ): AlbumCoverSourceSpec {
-    return if (coverMediaKind == "video") {
+    return if (coverMediaKind == "video" && coverUri.startsWith("content://media/")) {
         AlbumCoverSourceSpec.PlatformThumbnail(
+            uri = coverUri,
+            targetSizePx = targetSizePx,
+        )
+    } else if (coverMediaKind == "video") {
+        AlbumCoverSourceSpec.VideoFrameAssetFileDescriptor(
             uri = coverUri,
             targetSizePx = targetSizePx,
         )

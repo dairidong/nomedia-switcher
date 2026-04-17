@@ -15,6 +15,8 @@ class EnqueueToggleAlbumUseCase(
         directoryKey: String,
         albumName: String,
         action: ToggleAction,
+        coverUri: String? = null,
+        coverMediaKind: String? = null,
     ) {
         albumStateWriter.updateAlbum(
             directoryKey = directoryKey,
@@ -32,6 +34,8 @@ class EnqueueToggleAlbumUseCase(
                     .putString(ToggleAlbumWorker.KEY_DIRECTORY_KEY, directoryKey)
                     .putString(ToggleAlbumWorker.KEY_ALBUM_NAME, albumName)
                     .putString(ToggleAlbumWorker.KEY_ACTION, action.name)
+                    .putString(ToggleAlbumWorker.KEY_COVER_URI, coverUri)
+                    .putString(ToggleAlbumWorker.KEY_COVER_MEDIA_KIND, coverMediaKind)
                     .build(),
             )
             .build()

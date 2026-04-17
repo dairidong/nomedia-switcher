@@ -15,8 +15,12 @@ data class AlbumRecordEntity(
     val lastFailure: String?,
     val seenInLastScan: Boolean,
     val updatedAtEpochMs: Long,
+    val latestMediaTimestampEpochMs: Long? = null,
     val coverRelativeFilePath: String? = null,
     val coverDisplayName: String? = null,
     val coverMediaKind: String? = null,
     val coverUpdatedAtEpochMs: Long? = null,
+    val cachedCoverPath: String? = null,
+    val cachedCoverMediaKind: String? = null,
+    val cachedCoverUpdatedAtEpochMs: Long? = null,
 )

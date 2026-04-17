@@ -17,7 +17,7 @@ import com.nomedia.switcher.domain.model.ToggleAction
 
 @Database(
     entities = [AlbumRecordEntity::class, DirectoryGrantEntity::class],
-    version = 3,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(DatabaseConverters::class)
@@ -37,12 +37,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE album_records ADD COLUMN cachedCoverPath TEXT")
+                db.execSQL("ALTER TABLE album_records ADD COLUMN cachedCoverMediaKind TEXT")
+                db.execSQL("ALTER TABLE album_records ADD COLUMN cachedCoverUpdatedAtEpochMs INTEGER")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE album_records ADD COLUMN latestMediaTimestampEpochMs INTEGER")
+            }
+        }
+
         fun create(context: Context): AppDatabase {
             return Room.databaseBuilder(
                 context,
                 AppDatabase::class.java,
                 DATABASE_NAME,
-            ).addMigrations(MIGRATION_2_3).build()
+            ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
         }
     }
 }

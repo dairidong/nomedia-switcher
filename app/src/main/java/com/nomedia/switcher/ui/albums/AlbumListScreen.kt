@@ -15,16 +15,21 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +37,8 @@ import com.nomedia.switcher.R
 import com.nomedia.switcher.ui.common.AlbumCover
 import com.nomedia.switcher.ui.common.StatusChip
 import com.nomedia.switcher.ui.resolve
+import com.nomedia.switcher.ui.theme.TopBarContainer
+import com.nomedia.switcher.ui.theme.TopBarContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,14 +52,30 @@ fun AlbumListScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = {},
-                actions = {
-                    TextButton(onClick = onOpenSettings) {
-                        Text(text = stringResource(id = R.string.settings_title))
+            Surface(
+                color = TopBarContainer,
+                shadowElevation = 6.dp,
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(text = stringResource(id = R.string.app_name))
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        navigationIconContentColor = TopBarContent,
+                        titleContentColor = TopBarContent,
+                        actionIconContentColor = TopBarContent,
+                    ),
+                    actions = {
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_settings_24),
+                                contentDescription = stringResource(id = R.string.settings_open),
+                            )
+                        }
                     }
-                },
-            )
+                )
+            }
         },
     ) { paddingValues ->
         if (state.albums.isEmpty()) {

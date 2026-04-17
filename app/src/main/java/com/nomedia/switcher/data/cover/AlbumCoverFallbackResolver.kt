@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.nomedia.switcher.data.toggle.buildChildDocumentId
 import com.nomedia.switcher.data.toggle.buildChildDocumentUri
+import java.io.File
 import java.io.FileNotFoundException
 
 data class ResolvedAlbumCover(
@@ -26,8 +27,10 @@ interface TreeDocumentLookup {
 
 class AlbumCoverFallbackResolver(
     private val documentLookup: TreeDocumentLookup,
+    private val coverCacheStore: AlbumCoverCacheStore? = null,
 ) {
     suspend fun resolve(
+        directoryKey: String,
         treeUri: String,
         coverRelativeFilePath: String?,
         coverMediaKind: String?,
@@ -37,6 +40,18 @@ class AlbumCoverFallbackResolver(
         val resolvedDocument = documentLookup.findDocument(treeUri, relativeFilePath) ?: return null
         if (!mimeTypeMatches(mediaKind, resolvedDocument.mimeType)) {
             return null
+        }
+        if (mediaKind == "video") {
+            coverCacheStore?.createOrUpdate(
+                directoryKey = directoryKey,
+                sourceUri = resolvedDocument.uri,
+                sourceMediaKind = mediaKind,
+            )?.let { cached ->
+                return ResolvedAlbumCover(
+                    uri = File(cached.absolutePath).toURI().toString(),
+                    mediaKind = cached.mediaKind,
+                )
+            }
         }
         return ResolvedAlbumCover(
             uri = resolvedDocument.uri,

@@ -1,8 +1,11 @@
 package com.nomedia.switcher
 
 import android.content.Context
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -35,10 +38,11 @@ class AppLaunchTest {
     }
 
     @Test
-    fun launch_showsAlbumScreenTitle() {
+    fun launch_showsTopBarSettingsAction() {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
 
-        composeTestRule.onNodeWithText("Albums").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Open settings").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Albums").assertCountEquals(0)
 
         scenario.close()
     }

@@ -8,6 +8,14 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
@@ -22,20 +30,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Observer
+import androidx.work.WorkInfo
 import com.nomedia.switcher.NoMediaApplication
+import com.nomedia.switcher.data.cover.AlbumCoverWarningCode
+import com.nomedia.switcher.data.local.settings.AlbumSortMode
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.domain.usecase.ObserveAlbumsUseCase
 import com.nomedia.switcher.domain.usecase.ResolveToggleRequestUseCase
 import com.nomedia.switcher.domain.usecase.ToggleRequestResolution
 import com.nomedia.switcher.domain.model.AlbumState
 import com.nomedia.switcher.domain.model.ToggleFailureReason
+import com.nomedia.switcher.domain.model.shouldPersistAlbumFailureState
 import com.nomedia.switcher.ui.access.DirectoryGrantLauncher
 import com.nomedia.switcher.ui.albums.AlbumListScreen
 import com.nomedia.switcher.ui.albums.AlbumListViewModel
 import com.nomedia.switcher.ui.albums.AlbumRowState
 import com.nomedia.switcher.ui.progress.ToggleProgressSheet
 import com.nomedia.switcher.ui.settings.SettingsScreen
+import com.nomedia.switcher.worker.ToggleAlbumWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -56,7 +72,7 @@ fun AppRoot(
     val resolveToggleRequest = remember(container) { ResolveToggleRequestUseCase(container.directoryGrantRepository) }
     val coroutineScope = rememberCoroutineScope()
     var hasMediaPermission by rememberSaveable { mutableStateOf(context.hasMediaPermission()) }
-    var pendingGrantRequest by remember { mutableStateOf<ToggleRequestResolution.RequestGrant?>(null) }
+    var pendingGrantRequest by remember { mutableStateOf<PendingGrantRequest?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { grantResults ->
@@ -75,6 +91,7 @@ fun AppRoot(
                 records = records,
                 scan = scan,
                 pinHidden = settings.pinHiddenAlbumsToTop,
+                sortMode = settings.albumSortMode,
                 scanCompleted = completed,
             )
         }
@@ -110,6 +127,7 @@ fun AppRoot(
             settings = container.userSettingsRepository.settings,
             enqueueToggle = container.enqueueToggleAlbumUseCase::invoke,
             setPinHiddenAlbums = container.setHiddenAlbumsPinnedUseCase::invoke,
+            setAlbumSortMode = container.setAlbumSortModeUseCase::invoke,
             resolveFallbackCover = container.albumCoverFallbackResolver::resolve,
         ),
     )
@@ -179,43 +197,73 @@ fun AppRoot(
         }
     }
 
-    if (showSettings) {
-        SettingsScreen(
-            pinHiddenAlbumsToTop = state.pinHiddenAlbumsToTop,
-            onPinHiddenChanged = viewModel::onPinHiddenChanged,
-            onBack = { showSettings = false },
-        )
-    } else {
-        AlbumListScreen(
-            state = state,
-            onToggleClick = { album ->
-                coroutineScope.launch {
-                    when (val resolution = resolveToggleRequest(
-                        directoryKey = album.id.directoryKey,
-                        albumName = album.displayName,
-                        action = album.nextAction ?: return@launch,
-                    )) {
-                        is ToggleRequestResolution.Enqueue -> viewModel.onToggleClick(album)
-                        is ToggleRequestResolution.RequestGrant -> {
-                            pendingGrantRequest = resolution
-                            grantLauncher.launch(
-                                DirectoryGrantLauncher.createIntent(resolution.initialUri),
-                            )
-                        }
-                        is ToggleRequestResolution.Blocked -> recordToggleFailure(
-                            application = application,
-                            album = album,
-                            reason = resolution.reason,
-                        ).also {
-                            viewModel.onForegroundFailure(resolution.reason.toUiMessage())
+    LaunchedEffect(container, viewModel) {
+        val handledWorkIds = mutableSetOf<java.util.UUID>()
+        observeToggleWorkInfos(container.workManager).collectLatest { workInfos ->
+            workInfos
+                .asSequence()
+                .filter { it.state.isFinished }
+                .filter { handledWorkIds.add(it.id) }
+                .mapNotNull { workInfo ->
+                    workInfo.outputData.getString(ToggleAlbumWorker.KEY_COVER_CACHE_WARNING_CODE)
+                }
+                .mapNotNull(AlbumCoverWarningCode::fromPersistedKey)
+                .forEach { warningCode ->
+                    viewModel.onForegroundFailure(warningCode.toUiMessage())
+                }
+        }
+    }
+
+    AnimatedRootScreen(
+        showSettings = showSettings,
+        albumListContent = {
+            AlbumListScreen(
+                state = state,
+                onToggleClick = { album ->
+                    coroutineScope.launch {
+                        when (val resolution = resolveToggleRequest(
+                            directoryKey = album.id.directoryKey,
+                            albumName = album.displayName,
+                            action = album.nextAction ?: return@launch,
+                        )) {
+                            is ToggleRequestResolution.Enqueue -> viewModel.onToggleClick(album)
+                            is ToggleRequestResolution.RequestGrant -> {
+                                pendingGrantRequest = PendingGrantRequest(
+                                    directoryKey = resolution.directoryKey,
+                                    albumName = resolution.albumName,
+                                    action = resolution.action,
+                                    initialUri = resolution.initialUri,
+                                    coverUri = album.coverUri,
+                                    coverMediaKind = album.coverMediaKind,
+                                )
+                                grantLauncher.launch(
+                                    DirectoryGrantLauncher.createIntent(resolution.initialUri),
+                                )
+                            }
+                            is ToggleRequestResolution.Blocked -> recordToggleFailure(
+                                application = application,
+                                album = album,
+                                reason = resolution.reason,
+                            ).also {
+                                viewModel.onForegroundFailure(resolution.reason.toUiMessage())
+                            }
                         }
                     }
-                }
-            },
-            onOpenSettings = { showSettings = true },
-            highlightedAlbumId = highlightedAlbumId,
-        )
-    }
+                },
+                onOpenSettings = { showSettings = true },
+                highlightedAlbumId = highlightedAlbumId,
+            )
+        },
+        settingsContent = {
+            SettingsScreen(
+                pinHiddenAlbumsToTop = state.pinHiddenAlbumsToTop,
+                albumSortMode = state.albumSortMode,
+                onPinHiddenChanged = viewModel::onPinHiddenChanged,
+                onAlbumSortModeChanged = viewModel::onAlbumSortModeChanged,
+                onBack = { showSettings = false },
+            )
+        },
+    )
 
     state.progressSheet?.let { progressSheet ->
         ModalBottomSheet(
@@ -229,11 +277,59 @@ fun AppRoot(
     }
 }
 
+@Composable
+internal fun AnimatedRootScreen(
+    showSettings: Boolean,
+    albumListContent: @Composable () -> Unit,
+    settingsContent: @Composable () -> Unit,
+) {
+    AnimatedContent(
+        targetState = showSettings,
+        label = "root-screen-transition",
+        transitionSpec = {
+            if (targetState) {
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(durationMillis = 260),
+                        initialOffsetX = { fullWidth -> fullWidth / 5 },
+                    ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                    ) togetherWith (
+                    slideOutHorizontally(
+                        animationSpec = tween(durationMillis = 220),
+                        targetOffsetX = { fullWidth -> -fullWidth / 8 },
+                    ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                    )
+            } else {
+                (
+                    slideInHorizontally(
+                        animationSpec = tween(durationMillis = 260),
+                        initialOffsetX = { fullWidth -> -fullWidth / 5 },
+                    ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                    ) togetherWith (
+                    slideOutHorizontally(
+                        animationSpec = tween(durationMillis = 220),
+                        targetOffsetX = { fullWidth -> fullWidth / 8 },
+                    ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                    )
+            }.using(SizeTransform(clip = false))
+        },
+    ) { isSettingsVisible ->
+        if (isSettingsVisible) {
+            settingsContent()
+        } else {
+            albumListContent()
+        }
+    }
+}
+
 private suspend fun recordToggleFailure(
     application: NoMediaApplication,
     album: AlbumRowState,
     reason: ToggleFailureReason,
 ) {
+    if (!reason.shouldPersistAlbumFailureState()) {
+        return
+    }
     val action = album.nextAction ?: return
     application.appContainer.albumStateWriter.updateAlbum(
         directoryKey = album.id.directoryKey,
@@ -246,11 +342,33 @@ private suspend fun recordToggleFailure(
 }
 
 private fun ToggleRequestResolution.RequestGrant.toAlbumRowState(): AlbumRowState {
+    return PendingGrantRequest(
+        directoryKey = directoryKey,
+        albumName = albumName,
+        action = action,
+        initialUri = initialUri,
+        coverUri = null,
+        coverMediaKind = null,
+    ).toAlbumRowState()
+}
+
+private data class PendingGrantRequest(
+    val directoryKey: String,
+    val albumName: String,
+    val action: com.nomedia.switcher.domain.model.ToggleAction,
+    val initialUri: android.net.Uri,
+    val coverUri: String?,
+    val coverMediaKind: String?,
+)
+
+private fun PendingGrantRequest.toAlbumRowState(): AlbumRowState {
     return AlbumRowState(
         id = AlbumId(directoryKey),
         displayName = albumName,
         directorySummary = directoryKey,
         state = AlbumState.Shown,
+        coverUri = coverUri,
+        coverMediaKind = coverMediaKind,
         isChecked = action == com.nomedia.switcher.domain.model.ToggleAction.Show,
         isToggleEnabled = true,
         nextAction = action,
@@ -274,4 +392,15 @@ private fun android.content.Context.hasMediaPermission(): Boolean {
 
 private fun android.content.Context.hasPermission(permission: String): Boolean {
     return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun observeToggleWorkInfos(workManager: androidx.work.WorkManager) = callbackFlow<List<WorkInfo>> {
+    val liveData = workManager.getWorkInfosByTagLiveData(ToggleAlbumWorker.WORK_TAG)
+    val observer = Observer<List<WorkInfo>> { workInfos ->
+        trySend(workInfos.orEmpty())
+    }
+    liveData.observeForever(observer)
+    awaitClose {
+        liveData.removeObserver(observer)
+    }
 }

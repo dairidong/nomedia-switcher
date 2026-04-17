@@ -6,8 +6,15 @@
     <string name="album_list_opened_from_notification">Opened from notification</string>
     <string name="settings_title">Settings</string>
     <string name="settings_back">Back</string>
+    <string name="settings_open">Open settings</string>
     <string name="settings_pin_hidden_title">Pin hidden albums to top</string>
     <string name="settings_pin_hidden_helper">Keep locally hidden albums easy to reach on startup.</string>
+    <string name="settings_sort_title">Sort order</string>
+    <string name="settings_sort_helper">Sort within the current album groups without affecting hidden pinning.</string>
+    <string name="settings_sort_dialog_title">Choose sort order</string>
+    <string name="settings_sort_current_value">Current value: %1$s</string>
+    <string name="settings_sort_by_name">By name</string>
+    <string name="settings_sort_by_latest_media">By latest media time</string>
     <string name="toggle_progress_helper">Large albums can take a while. You can hide this panel and let the task continue.</string>
     <string name="toggle_progress_hide_panel">Hide panel</string>
     <string name="toggle_progress_channel_name">Toggle progress</string>
@@ -31,4 +38,9 @@
     <string name="album_failure_missing_directory_grant">Folder access is missing. Grant it again.</string>
     <string name="album_failure_unable_to_create_nomedia">Couldn\'t create the .nomedia file</string>
     <string name="album_failure_unable_to_remove_nomedia">Couldn\'t remove the .nomedia file</string>
+    <string name="album_warning_video_thumbnail_failed">Video cover cache failed: system thumbnail failed</string>
+    <string name="album_warning_video_frame_failed">Video cover cache failed: frame extraction failed</string>
+    <string name="album_warning_video_thumbnail_and_frame_failed">Video cover cache failed: thumbnail and frame extraction both failed</string>
+    <string name="album_warning_cover_cache_write_failed">Video cover cache failed: cache file write failed</string>
+    <string name="album_warning_cover_cache_failed">Video cover cache failed</string>
 </resources>

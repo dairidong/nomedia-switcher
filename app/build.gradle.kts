@@ -4,6 +4,25 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
 }
 
+val releaseStoreFile = providers.environmentVariable("NOMEDIA_RELEASE_STORE_FILE")
+val releaseStorePassword = providers.environmentVariable("NOMEDIA_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = providers.environmentVariable("NOMEDIA_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = providers.environmentVariable("NOMEDIA_RELEASE_KEY_PASSWORD")
+val releaseSigningEnv = mapOf(
+    "NOMEDIA_RELEASE_STORE_FILE" to releaseStoreFile.orNull,
+    "NOMEDIA_RELEASE_STORE_PASSWORD" to releaseStorePassword.orNull,
+    "NOMEDIA_RELEASE_KEY_ALIAS" to releaseKeyAlias.orNull,
+    "NOMEDIA_RELEASE_KEY_PASSWORD" to releaseKeyPassword.orNull,
+)
+val missingReleaseSigningEnv = releaseSigningEnv
+    .filterValues { it.isNullOrBlank() }
+    .keys
+    .sorted()
+val hasReleaseSigningConfig = missingReleaseSigningEnv.isEmpty()
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("release", ignoreCase = true)
+}
+
 android {
     namespace = "com.nomedia.switcher"
     compileSdk = 35
@@ -15,15 +34,31 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resourceConfigurations += listOf("en", "zh-rCN")
+    }
+
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            create("release") {
+                storeFile = file(releaseStoreFile.get())
+                storePassword = releaseStorePassword.get()
+                keyAlias = releaseKeyAlias.get()
+                keyPassword = releaseKeyPassword.get()
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -98,4 +133,11 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+if (isReleaseTaskRequested && !hasReleaseSigningConfig) {
+    throw GradleException(
+        "Missing release signing environment variables: ${missingReleaseSigningEnv.joinToString(", ")}. " +
+            "Set these before running a release build.",
+    )
 }

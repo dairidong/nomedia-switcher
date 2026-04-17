@@ -28,3 +28,19 @@ enum class ToggleFailureReason(
         }
     }
 }
+
+fun ToggleFailureReason.shouldPersistAlbumFailureState(): Boolean {
+    return when (this) {
+        ToggleFailureReason.RestrictedRoot,
+        ToggleFailureReason.GrantDenied,
+        ToggleFailureReason.WrongDirectorySelected,
+        ToggleFailureReason.PersistPermissionDenied,
+        ToggleFailureReason.MissingDirectoryGrant,
+        -> false
+
+        ToggleFailureReason.Interrupted,
+        ToggleFailureReason.UnableToCreateNomedia,
+        ToggleFailureReason.UnableToRemoveNomedia,
+        -> true
+    }
+}

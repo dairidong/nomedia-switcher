@@ -5,8 +5,15 @@
     <string name="album_list_opened_from_notification">从通知中打开</string>
     <string name="settings_title">设置</string>
     <string name="settings_back">返回</string>
+    <string name="settings_open">打开设置</string>
     <string name="settings_pin_hidden_title">将已隐藏图集置顶</string>
     <string name="settings_pin_hidden_helper">让本地已隐藏图集在启动时更容易找到。</string>
+    <string name="settings_sort_title">排序方式</string>
+    <string name="settings_sort_helper">仅在当前分组内排序，不影响已隐藏图集置顶。</string>
+    <string name="settings_sort_dialog_title">选择排序方式</string>
+    <string name="settings_sort_current_value">当前值: %1$s</string>
+    <string name="settings_sort_by_name">按名称</string>
+    <string name="settings_sort_by_latest_media">按最新媒体时间</string>
     <string name="toggle_progress_helper">大图集可能需要一些时间。你可以隐藏此面板，让任务继续。</string>
     <string name="toggle_progress_hide_panel">隐藏面板</string>
     <string name="toggle_progress_channel_name">切换进度</string>
@@ -30,4 +37,9 @@
     <string name="album_failure_missing_directory_grant">缺少文件夹访问权限，请重新授权。</string>
     <string name="album_failure_unable_to_create_nomedia">无法创建 .nomedia 文件</string>
     <string name="album_failure_unable_to_remove_nomedia">无法删除 .nomedia 文件</string>
+    <string name="album_warning_video_thumbnail_failed">视频封面缓存失败：系统缩略图失败</string>
+    <string name="album_warning_video_frame_failed">视频封面缓存失败：视频抽帧失败</string>
+    <string name="album_warning_video_thumbnail_and_frame_failed">视频封面缓存失败：系统缩略图和视频抽帧都失败</string>
+    <string name="album_warning_cover_cache_write_failed">视频封面缓存失败：缓存文件写入失败</string>
+    <string name="album_warning_cover_cache_failed">视频封面缓存失败</string>
 </resources>

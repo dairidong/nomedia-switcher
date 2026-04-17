@@ -5,6 +5,7 @@ import androidx.work.ListenableWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
+import com.nomedia.switcher.data.cover.AlbumCoverCacheStore
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
 import com.nomedia.switcher.data.toggle.MediaRefreshCoordinator
 import com.nomedia.switcher.data.toggle.NomediaDocumentGateway
@@ -19,6 +20,7 @@ class ToggleWorkerFactory(
     private val mediaRefreshCoordinator: MediaRefreshCoordinator,
     private val notificationFactory: WorkerNotificationFactory,
     private val albumStateWriter: AlbumStateWriter,
+    private val coverCacheStore: AlbumCoverCacheStore,
 ) : WorkerFactory() {
     override fun createWorker(
         appContext: Context,
@@ -37,6 +39,7 @@ class ToggleWorkerFactory(
             mediaRefreshCoordinator = mediaRefreshCoordinator,
             notificationFactory = notificationFactory,
             albumStateWriter = albumStateWriter,
+            coverCacheStore = coverCacheStore,
         )
     }
 }

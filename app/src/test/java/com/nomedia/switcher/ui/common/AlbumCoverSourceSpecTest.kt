@@ -37,4 +37,19 @@ class AlbumCoverSourceSpecTest {
             ),
         )
     }
+
+    @Test
+    fun document_video_cover_source_uses_asset_file_descriptor_video_frame_loading() {
+        assertEquals(
+            AlbumCoverSourceSpec.VideoFrameAssetFileDescriptor(
+                uri = "content://com.android.externalstorage.documents/document/primary%3AMovies%2FTrips%2FVID_0007.mp4",
+                targetSizePx = 128,
+            ),
+            buildAlbumCoverSourceSpec(
+                coverUri = "content://com.android.externalstorage.documents/document/primary%3AMovies%2FTrips%2FVID_0007.mp4",
+                coverMediaKind = "video",
+                targetSizePx = 128,
+            ),
+        )
+    }
 }

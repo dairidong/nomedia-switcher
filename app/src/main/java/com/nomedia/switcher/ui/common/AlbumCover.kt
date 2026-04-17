@@ -1,6 +1,8 @@
 package com.nomedia.switcher.ui.common
 
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Log
 import android.util.Size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
@@ -31,6 +33,8 @@ import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val VIDEO_FRAME_MICROS = 100_000L
 
 @Composable
 fun AlbumCover(
@@ -67,6 +71,16 @@ fun AlbumCover(
 
     if (sourceSpec is AlbumCoverSourceSpec.PlatformThumbnail) {
         PlatformThumbnailCover(
+            directoryKey = directoryKey,
+            displayName = displayName,
+            source = sourceSpec,
+            modifier = coverModifier,
+        )
+        return
+    }
+
+    if (sourceSpec is AlbumCoverSourceSpec.VideoFrameAssetFileDescriptor) {
+        VideoFrameAssetFileDescriptorCover(
             directoryKey = directoryKey,
             displayName = displayName,
             source = sourceSpec,
@@ -136,10 +150,13 @@ private fun PlatformThumbnailCover(
         }
 
         PlatformThumbnailState.Error -> {
-            CoilVideoFallbackCover(
+            VideoFrameAssetFileDescriptorCover(
                 directoryKey = directoryKey,
                 displayName = displayName,
-                source = source,
+                source = AlbumCoverSourceSpec.VideoFrameAssetFileDescriptor(
+                    uri = source.uri,
+                    targetSizePx = source.targetSizePx,
+                ),
                 modifier = modifier,
             )
         }
@@ -156,42 +173,45 @@ private fun PlatformThumbnailCover(
 }
 
 @Composable
-private fun CoilVideoFallbackCover(
+private fun VideoFrameAssetFileDescriptorCover(
     directoryKey: String,
     displayName: String,
-    source: AlbumCoverSourceSpec.PlatformThumbnail,
+    source: AlbumCoverSourceSpec.VideoFrameAssetFileDescriptor,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
-    val model = remember(context, source) {
-        val requestSpec = buildAlbumCoverRequestSpec(
-            coverUri = source.uri,
-            coverMediaKind = "video",
+    val frameState by produceState<PlatformThumbnailState>(
+        initialValue = PlatformThumbnailState.Loading,
+        key1 = context,
+        key2 = source,
+    ) {
+        value = loadVideoFrameFromAssetFileDescriptor(
+            context = context,
+            uri = source.uri,
             targetSizePx = source.targetSizePx,
-        )
-        ImageRequest.Builder(context)
-            .data(requestSpec.data)
-            .size(requestSpec.targetSizePx, requestSpec.targetSizePx)
-            .videoFrameMillis(requestSpec.videoFrameMillis)
-            .build()
+        )?.let(PlatformThumbnailState::Loaded) ?: PlatformThumbnailState.Error
     }
-    val painter = rememberAsyncImagePainter(model = model)
 
-    if (painter.state is AsyncImagePainter.State.Error) {
-        AlbumCoverPlaceholder(
+    when (val state = frameState) {
+        PlatformThumbnailState.Loading -> AlbumCoverPlaceholder(
             directoryKey = directoryKey,
             displayName = displayName,
             modifier = modifier,
         )
-        return
-    }
 
-    Image(
-        painter = painter,
-        contentDescription = null,
-        modifier = modifier.testTag("album-cover-image-$directoryKey"),
-        contentScale = ContentScale.Crop,
-    )
+        PlatformThumbnailState.Error -> AlbumCoverPlaceholder(
+            directoryKey = directoryKey,
+            displayName = displayName,
+            modifier = modifier,
+        )
+
+        is PlatformThumbnailState.Loaded -> Image(
+            bitmap = state.bitmap,
+            contentDescription = null,
+            modifier = modifier.testTag("album-cover-image-$directoryKey"),
+            contentScale = ContentScale.Crop,
+        )
+    }
 }
 
 private suspend fun loadPlatformThumbnail(
@@ -207,6 +227,41 @@ private suspend fun loadPlatformThumbnail(
                 null,
             ).asImageBitmap()
         }
+    }.getOrNull()
+}
+
+private suspend fun loadVideoFrameFromAssetFileDescriptor(
+    context: android.content.Context,
+    uri: String,
+    targetSizePx: Int,
+): ImageBitmap? {
+    return runCatching {
+        withContext(Dispatchers.IO) {
+            context.contentResolver.openAssetFileDescriptor(Uri.parse(uri), "r")?.use { descriptor ->
+                val retriever = MediaMetadataRetriever()
+                try {
+                    if (descriptor.declaredLength >= 0) {
+                        retriever.setDataSource(
+                            descriptor.fileDescriptor,
+                            descriptor.startOffset,
+                            descriptor.declaredLength,
+                        )
+                    } else {
+                        retriever.setDataSource(descriptor.fileDescriptor)
+                    }
+                    retriever.getScaledFrameAtTime(
+                        VIDEO_FRAME_MICROS,
+                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                        targetSizePx,
+                        targetSizePx,
+                    )?.asImageBitmap()
+                } finally {
+                    runCatching { retriever.release() }
+                }
+            }
+        }
+    }.onFailure {
+        Log.d("AlbumCover", "Failed to load video frame from asset file descriptor for $uri", it)
     }.getOrNull()
 }
 

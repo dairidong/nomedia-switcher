@@ -21,6 +21,12 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setAlbumSortMode(mode: AlbumSortMode) {
+        dataStore.updateData { current ->
+            current.copy(albumSortMode = mode)
+        }
+    }
+
     companion object {
         fun create(context: Context): UserSettingsRepository {
             return UserSettingsRepository(

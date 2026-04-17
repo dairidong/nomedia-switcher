@@ -10,4 +10,5 @@ data class MediaStoreAlbumRow(
     val displayName: String?,
     val albumRelativeFilePath: String?,
     val mediaKind: String,
+    val dateModifiedEpochMs: Long? = null,
 )

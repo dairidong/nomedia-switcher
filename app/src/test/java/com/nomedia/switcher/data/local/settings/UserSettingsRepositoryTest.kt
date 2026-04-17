@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -37,6 +38,7 @@ class UserSettingsRepositoryTest {
         )
 
         assertTrue(repository.settings.first().pinHiddenAlbumsToTop)
+        assertEquals(AlbumSortMode.ByName, repository.settings.first().albumSortMode)
     }
 
     @Test
@@ -52,6 +54,21 @@ class UserSettingsRepositoryTest {
         repository.setPinHiddenAlbumsToTop(false)
 
         assertEquals(false, repository.settings.first().pinHiddenAlbumsToTop)
+    }
+
+    @Test
+    fun update_persistsAlbumSortModeChoice() = runTest {
+        val repository = UserSettingsRepository(
+            dataStore = DataStoreFactory.create(
+                serializer = UserSettingsSerializer,
+                scope = backgroundScope,
+                produceFile = { settingsFile },
+            ),
+        )
+
+        repository.setAlbumSortMode(AlbumSortMode.ByLatestMedia)
+
+        assertEquals(AlbumSortMode.ByLatestMedia, repository.settings.first().albumSortMode)
     }
 
     @Test
@@ -72,5 +89,40 @@ class UserSettingsRepositoryTest {
             fail("Expected CorruptionException")
         } catch (_: CorruptionException) {
         }
+    }
+
+    @Test
+    fun serializer_roundTripsPinHiddenAndSortMode() = runTest {
+        val output = RecordingOutputStream()
+
+        UserSettingsSerializer.writeTo(
+            UserSettings(
+                pinHiddenAlbumsToTop = false,
+                albumSortMode = AlbumSortMode.ByLatestMedia,
+            ),
+            output,
+        )
+
+        val restored = UserSettingsSerializer.readFrom(
+            output.toString().byteInputStream() as InputStream,
+        )
+
+        assertEquals(
+            UserSettings(
+                pinHiddenAlbumsToTop = false,
+                albumSortMode = AlbumSortMode.ByLatestMedia,
+            ),
+            restored,
+        )
+    }
+
+    private class RecordingOutputStream : OutputStream() {
+        private val bytes = mutableListOf<Byte>()
+
+        override fun write(b: Int) {
+            bytes += b.toByte()
+        }
+
+        override fun toString(): String = bytes.toByteArray().decodeToString()
     }
 }

@@ -14,6 +14,7 @@ class MediaStoreAlbumScanner(
         MediaStore.MediaColumns.VOLUME_NAME,
         MediaStore.MediaColumns.DISPLAY_NAME,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.MediaColumns.DATE_MODIFIED,
     )
 
     fun fromRows(rows: List<MediaStoreAlbumRow>): List<AlbumCandidate> {
@@ -65,6 +66,7 @@ class MediaStoreAlbumScanner(
                     directoryKey = directories.single(),
                     volumeName = bucketRows.firstNotNullOfOrNull { it.volumeName },
                     coverUri = coverUriString,
+                    latestMediaTimestampEpochMs = newestRow.dateModifiedEpochMs,
                     coverRelativeFilePath = newestRow.albumRelativeFilePath,
                     coverDisplayName = newestRow.displayName,
                     coverMediaKind = newestRow.mediaKind,

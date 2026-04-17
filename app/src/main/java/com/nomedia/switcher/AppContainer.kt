@@ -2,6 +2,8 @@ package com.nomedia.switcher
 
 import android.app.Application
 import androidx.work.WorkManager
+import com.nomedia.switcher.data.cover.AndroidLogAlbumCoverCacheDiagnosticReporter
+import com.nomedia.switcher.data.cover.AlbumCoverCacheStore
 import com.nomedia.switcher.data.cover.AlbumCoverFallbackResolver
 import com.nomedia.switcher.data.cover.SafTreeDocumentLookup
 import com.nomedia.switcher.data.access.DirectoryGrantRepository
@@ -15,6 +17,7 @@ import com.nomedia.switcher.data.toggle.SafNomediaDirectoryAccess
 import com.nomedia.switcher.domain.usecase.EnqueueToggleAlbumUseCase
 import com.nomedia.switcher.domain.usecase.PersistScannedAlbumCoverReferencesUseCase
 import com.nomedia.switcher.domain.usecase.RecoverInterruptedAlbumTogglesUseCase
+import com.nomedia.switcher.domain.usecase.SetAlbumSortModeUseCase
 import com.nomedia.switcher.domain.usecase.SetHiddenAlbumsPinnedUseCase
 import com.nomedia.switcher.worker.DefaultWorkerNotificationFactory
 import com.nomedia.switcher.worker.ToggleWorkerFactory
@@ -23,14 +26,19 @@ import com.nomedia.switcher.worker.ToggleAlbumWorker
 class AppContainer(
     application: Application,
 ) {
-    private val workManager: WorkManager by lazy { WorkManager.getInstance(application) }
+    val workManager: WorkManager by lazy { WorkManager.getInstance(application) }
     val database: AppDatabase = AppDatabase.create(application)
     val albumStateWriter = RoomAlbumStateWriter(database.albumRecordDao())
     val mediaStoreAlbumLoader = MediaStoreAlbumLoader()
     val userSettingsRepository = UserSettingsRepository.create(application)
     val directoryGrantRepository = DirectoryGrantRepository(database.directoryGrantDao())
+    val albumCoverCacheStore = AlbumCoverCacheStore(
+        context = application,
+        diagnosticReporter = AndroidLogAlbumCoverCacheDiagnosticReporter(),
+    )
     val albumCoverFallbackResolver = AlbumCoverFallbackResolver(
         documentLookup = SafTreeDocumentLookup(application),
+        coverCacheStore = albumCoverCacheStore,
     )
     val persistScannedAlbumCoverReferencesUseCase = PersistScannedAlbumCoverReferencesUseCase(
         database.albumRecordDao(),
@@ -46,6 +54,7 @@ class AppContainer(
         mediaRefreshCoordinator = mediaRefreshCoordinator,
         notificationFactory = workerNotificationFactory,
         albumStateWriter = albumStateWriter,
+        coverCacheStore = albumCoverCacheStore,
     )
     val enqueueToggleAlbumUseCase: EnqueueToggleAlbumUseCase by lazy {
         EnqueueToggleAlbumUseCase(
@@ -72,4 +81,5 @@ class AppContainer(
         albumStateWriter = albumStateWriter,
     )
     val setHiddenAlbumsPinnedUseCase = SetHiddenAlbumsPinnedUseCase(userSettingsRepository)
+    val setAlbumSortModeUseCase = SetAlbumSortModeUseCase(userSettingsRepository)
 }

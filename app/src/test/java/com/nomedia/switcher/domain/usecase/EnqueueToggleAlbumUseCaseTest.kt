@@ -119,6 +119,14 @@ class EnqueueToggleAlbumUseCaseTest {
                 treeUri = treeUri,
             )
         }
+
+        override suspend fun updateCachedCover(
+            directoryKey: String,
+            cachedCoverPath: String,
+            cachedCoverMediaKind: String,
+            cachedCoverUpdatedAtEpochMs: Long,
+        ) {
+        }
     }
 }
 

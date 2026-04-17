@@ -6,6 +6,7 @@ data class AlbumCandidate(
     val directoryKey: String,
     val volumeName: String? = null,
     val coverUri: String? = null,
+    val latestMediaTimestampEpochMs: Long? = null,
     val coverRelativeFilePath: String? = null,
     val coverDisplayName: String? = null,
     val coverMediaKind: String? = null,

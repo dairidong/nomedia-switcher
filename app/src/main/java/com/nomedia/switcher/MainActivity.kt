@@ -4,19 +4,31 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.nomedia.switcher.domain.model.AlbumId
 import com.nomedia.switcher.ui.AppRoot
 import com.nomedia.switcher.ui.theme.NoMediaTheme
+import com.nomedia.switcher.ui.theme.TopBarContainer
 
 class MainActivity : ComponentActivity() {
     private var highlightedAlbumId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(TopBarContainer.toArgb()),
+            navigationBarStyle = SystemBarStyle.auto(
+                Color.Transparent.toArgb(),
+                Color.Transparent.toArgb(),
+            ),
+        )
         highlightedAlbumId = extractAlbumId(intent)
         setContent {
             NoMediaTheme {

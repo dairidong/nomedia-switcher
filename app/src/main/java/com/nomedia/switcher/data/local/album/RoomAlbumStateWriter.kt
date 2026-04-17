@@ -33,6 +33,26 @@ class RoomAlbumStateWriter(
                 coverDisplayName = existing?.coverDisplayName,
                 coverMediaKind = existing?.coverMediaKind,
                 coverUpdatedAtEpochMs = existing?.coverUpdatedAtEpochMs,
+                cachedCoverPath = existing?.cachedCoverPath,
+                cachedCoverMediaKind = existing?.cachedCoverMediaKind,
+                cachedCoverUpdatedAtEpochMs = existing?.cachedCoverUpdatedAtEpochMs,
+            ),
+        )
+    }
+
+    override suspend fun updateCachedCover(
+        directoryKey: String,
+        cachedCoverPath: String,
+        cachedCoverMediaKind: String,
+        cachedCoverUpdatedAtEpochMs: Long,
+    ) {
+        val existing = albumRecordDao.findByDirectoryKey(directoryKey) ?: return
+        albumRecordDao.upsert(
+            existing.copy(
+                updatedAtEpochMs = currentTimeProvider(),
+                cachedCoverPath = cachedCoverPath,
+                cachedCoverMediaKind = cachedCoverMediaKind,
+                cachedCoverUpdatedAtEpochMs = cachedCoverUpdatedAtEpochMs,
             ),
         )
     }

@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NOMEDIA_RELEASE_STORE_FILE: ${{ runner.temp }}/nomedia-release.keystore
+      NOMEDIA_RELEASE_STORE_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_STORE_PASSWORD }}
+      NOMEDIA_RELEASE_KEY_ALIAS: ${{ secrets.NOMEDIA_RELEASE_KEY_ALIAS }}
+      NOMEDIA_RELEASE_KEY_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        shell: bash
+        run: |
+          echo "${{ secrets.NOMEDIA_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > "$NOMEDIA_RELEASE_STORE_FILE"
+
+      - name: Build signed release APK
+        shell: bash
+        run: ./gradlew :app:assembleRelease
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nomedia-switcher-release
+          path: app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish GitHub Release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes ""
+          gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
