@@ -5,4 +5,10 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
     </style>
+
+    <style name="Theme.NoMediaSwitcher.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#F1F5F9</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.NoMediaSwitcher</item>
+    </style>
 </resources>
