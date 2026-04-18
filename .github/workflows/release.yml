@@ -13,7 +13,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      NOMEDIA_RELEASE_STORE_FILE: ${{ runner.temp }}/nomedia-release.keystore
+      NOMEDIA_RELEASE_STORE_FILE: ${{ github.workspace }}/nomedia-release.keystore
       NOMEDIA_RELEASE_STORE_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_STORE_PASSWORD }}
       NOMEDIA_RELEASE_KEY_ALIAS: ${{ secrets.NOMEDIA_RELEASE_KEY_ALIAS }}
       NOMEDIA_RELEASE_KEY_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_KEY_PASSWORD }}
