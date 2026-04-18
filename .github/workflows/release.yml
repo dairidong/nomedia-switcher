@@ -12,11 +12,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      NOMEDIA_RELEASE_STORE_FILE: ${{ github.workspace }}/nomedia-release.keystore
-      NOMEDIA_RELEASE_STORE_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_STORE_PASSWORD }}
-      NOMEDIA_RELEASE_KEY_ALIAS: ${{ secrets.NOMEDIA_RELEASE_KEY_ALIAS }}
-      NOMEDIA_RELEASE_KEY_PASSWORD: ${{ secrets.NOMEDIA_RELEASE_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,10 +25,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode release keystore
+      - name: Prepare release signing inputs
         shell: bash
         run: |
-          echo "${{ secrets.NOMEDIA_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > "$NOMEDIA_RELEASE_STORE_FILE"
+          STORE_FILE="$RUNNER_TEMP/nomedia-release.keystore"
+          echo "NOMEDIA_RELEASE_STORE_FILE=$STORE_FILE" >> "$GITHUB_ENV"
+          echo "NOMEDIA_RELEASE_STORE_PASSWORD=${{ secrets.NOMEDIA_RELEASE_STORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "NOMEDIA_RELEASE_KEY_ALIAS=${{ secrets.NOMEDIA_RELEASE_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "NOMEDIA_RELEASE_KEY_PASSWORD=${{ secrets.NOMEDIA_RELEASE_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "${{ secrets.NOMEDIA_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > "$STORE_FILE"
 
       - name: Build signed release APK
         shell: bash
@@ -54,3 +54,8 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes ""
           gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
+
+      - name: Clean release keystore
+        if: always()
+        shell: bash
+        run: rm -f "$NOMEDIA_RELEASE_STORE_FILE"
