@@ -115,6 +115,45 @@ class MediaStoreAlbumScannerTest {
     }
 
     @Test
+    fun bucket_with_case_variant_directory_paths_uses_system_bucket_grouping() {
+        val rows = listOf(
+            row(
+                mediaId = 100L,
+                bucketId = "-243170037",
+                bucketName = "X",
+                relativePath = "Download/X/",
+                displayName = "newest.jpg",
+                albumRelativeFilePath = "newest.jpg",
+                dateModifiedEpochMs = 2_000L,
+            ),
+            row(
+                mediaId = 200L,
+                bucketId = "-243170037",
+                bucketName = "X",
+                relativePath = "download/X/",
+                displayName = "older.jpg",
+                albumRelativeFilePath = "older.jpg",
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                candidate(
+                    bucketId = "-243170037",
+                    bucketName = "X",
+                    directoryKey = "Download/X",
+                    coverUri = coverUri(100L),
+                    latestMediaTimestampEpochMs = 2_000L,
+                    coverRelativeFilePath = "newest.jpg",
+                    coverDisplayName = "newest.jpg",
+                    coverMediaKind = "image",
+                ),
+            ),
+            scanner.fromRows(rows),
+        )
+    }
+
+    @Test
     fun row_without_resolvable_directory_isIgnored() {
         assertEquals(
             emptyList<AlbumCandidate>(),
